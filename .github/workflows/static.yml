@@ -1,10 +1,8 @@
-name: static analysis
-
 on:
-  pull_request:
-  push:
-  schedule:
-    - cron: '0 0 * * *'
+  - pull_request
+  - push
+
+name: static analysis
 
 jobs:
   mutation:
@@ -25,7 +23,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2.3.4
+        uses: actions/checkout@v2
 
       - name: Install PHP
         uses: shivammathur/setup-php@v2
