@@ -32,6 +32,22 @@ use function version_compare;
 
 /**
  * Schema is the class for retrieving metadata from MS SQL Server databases (version 2008 and above).
+ *
+ * @psalm-type ConstraintArray = array<
+ *   array-key,
+ *   array {
+ *     name: string,
+ *     column_name: string,
+ *     type: string,
+ *     foreign_table_schema: string|null,
+ *     foreign_table_name: string|null,
+ *     foreign_column_name: string|null,
+ *     on_update: string,
+ *     on_delete: string,
+ *     check_expr: string,
+ *     default_expr?: string
+ *   }
+ * >
  */
 final class Schema extends AbstractSchema implements ConstraintFinderInterface
 {
@@ -859,7 +875,12 @@ SQL;
             'defaults' => [],
         ];
 
+        /** @psalm-var array<array-key, array> $constraints */
         foreach ($constraints as $type => $names) {
+            /**
+             * @psalm-var object|string|null $name
+             * @psalm-var ConstraintArray $constraint
+             */
             foreach ($names as $name => $constraint) {
                 switch ($type) {
                     case 'PK':

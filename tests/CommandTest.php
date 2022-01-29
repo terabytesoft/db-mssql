@@ -11,7 +11,7 @@ use yiisoft\Db\Exception\InvalidArgumentException;
 use Yiisoft\Db\Mssql\Schema;
 use Yiisoft\Db\Query\Query;
 
-use Yiisoft\Db\TestUtility\TestCommandTrait;
+use Yiisoft\Db\TestSupport\TestCommandTrait;
 
 /**
  * @group mssql
