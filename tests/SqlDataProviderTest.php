@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Yiisoft\Db\Mssql\Tests;
 
-use Yiisoft\Db\TestUtility\TestSqlDataProviderTrait;
+use Yiisoft\Db\TestSupport\TestSqlDataProviderTrait;
 
 /**
  * @group mssql

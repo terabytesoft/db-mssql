@@ -4,18 +4,18 @@ declare(strict_types=1);
 
 namespace Yiisoft\Db\Mssql\Condition;
 
-use function implode;
-use function is_array;
-use function strpos;
 use Traversable;
 use Yiisoft\Db\Exception\Exception;
 use Yiisoft\Db\Exception\InvalidArgumentException;
 use Yiisoft\Db\Exception\InvalidConfigException;
 use Yiisoft\Db\Exception\NotSupportedException;
-
-use Yiisoft\Db\Mssql\Connection;
+use Yiisoft\Db\Connection\ConnectionInterface;
 use Yiisoft\Db\Query\Conditions\InConditionBuilder as AbstractInConditionBuilder;
 use Yiisoft\Db\Query\Query;
+
+use function implode;
+use function is_array;
+use function strpos;
 
 final class InConditionBuilder extends AbstractInConditionBuilder
 {
@@ -52,7 +52,7 @@ final class InConditionBuilder extends AbstractInConditionBuilder
      */
     protected function buildCompositeInCondition(?string $operator, $columns, $values, array &$params = []): string
     {
-        /** @var Connection $db */
+        /** @var ConnectionInterface $db */
         $db = $this->queryBuilder->getDb();
 
         $quotedColumns = [];

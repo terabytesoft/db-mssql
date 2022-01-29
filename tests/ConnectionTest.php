@@ -9,7 +9,7 @@ use Yiisoft\Cache\CacheKeyNormalizer;
 use Yiisoft\Db\Exception\Exception;
 use Yiisoft\Db\Exception\InvalidConfigException;
 use Yiisoft\Db\Mssql\Connection;
-use Yiisoft\Db\TestUtility\TestConnectionTrait;
+use Yiisoft\Db\TestSupport\TestConnectionTrait;
 
 /**
  * @group mssql
@@ -21,39 +21,32 @@ final class ConnectionTest extends TestCase
     public function testConstruct(): void
     {
         $db = $this->getConnection();
-
-        $this->assertEquals(self::DB_DSN, $db->getDsn());
+        $this->assertEquals($this->dsn, $db->getDriver()->getDsn());
     }
 
     public function testGetDriverName(): void
     {
         $db = $this->getConnection();
-
         $this->assertEquals('sqlsrv', $db->getDriverName());
     }
 
     public function testOpenClose(): void
     {
         $db = $this->getConnection();
-
         $this->assertFalse($db->isActive());
         $this->assertNull($db->getPDO());
 
         $db->open();
-
         $this->assertTrue($db->isActive());
         $this->assertInstanceOf(PDO::class, $db->getPDO());
 
         $db->close();
-
         $this->assertFalse($db->isActive());
         $this->assertNull($db->getPDO());
 
-        $db = $this->createConnection('unknown::memory:');
-
+        $db = $this->getConnection(false, 'unknown::memory:');
         $this->expectException(Exception::class);
         $this->expectExceptionMessage('could not find driver');
-
         $db->open();
     }
 
@@ -131,19 +124,16 @@ final class ConnectionTest extends TestCase
     {
         $db = $this->getConnection();
 
-        $db->setSlave('1', $this->createConnection(self::DB_DSN));
-
+        $db->setSlave('1', $this->getConnection());
         $this->assertNotNull($db->getSlavePdo(false));
 
         $db->close();
 
         $masterPdo = $db->getMasterPdo();
-
         $this->assertNotFalse($masterPdo);
         $this->assertNotNull($masterPdo);
 
         $slavePdo = $db->getSlavePdo(false);
-
         $this->assertNotFalse($slavePdo);
         $this->assertNotNull($slavePdo);
         $this->assertNotSame($masterPdo, $slavePdo);
@@ -151,17 +141,15 @@ final class ConnectionTest extends TestCase
 
     public function testServerStatusCacheWorks(): void
     {
-        $cacheKeyNormalizer = new CacheKeyNormalizer();
         $db = $this->getConnection();
+        $cacheKeyNormalizer = new CacheKeyNormalizer();
 
-        $db->setMaster('1', $this->createConnection(self::DB_DSN));
-
+        $db->setMaster('1', $this->getConnection());
         $db->setShuffleMasters(false);
 
         $cacheKey = $cacheKeyNormalizer->normalize(
-            ['Yiisoft\Db\Connection\Connection::openFromPoolSequentially', $db->getDsn()]
+            ['Yiisoft\Db\Connection\Connection::openFromPoolSequentially', $db->getDriver()->getDsn()]
         );
-
         $this->assertFalse($this->cache->psr()->has($cacheKey));
 
         $db->open();
@@ -173,14 +161,11 @@ final class ConnectionTest extends TestCase
 
         $db->close();
 
-        $db = $this->getConnection();
-
         $cacheKey = $cacheKeyNormalizer->normalize(
             ['Yiisoft\Db\Connection\Connection::openFromPoolSequentially', 'host:invalid']
         );
 
-        $db->setMaster('1', $this->createConnection('host:invalid'));
-
+        $db->setMaster('1', $this->getConnection(false, 'host:invalid'));
         $db->setShuffleMasters(true);
 
         try {
@@ -198,24 +183,19 @@ final class ConnectionTest extends TestCase
 
     public function testServerStatusCacheCanBeDisabled(): void
     {
+        $db = $this->getConnection();
         $cacheKeyNormalizer = new CacheKeyNormalizer();
 
-        $db = $this->getConnection();
-
-        $db->setMaster('1', $this->createConnection(self::DB_DSN));
-
+        $db->setMaster('1', $this->getConnection());
         $this->schemaCache->setEnable(false);
-
         $db->setShuffleMasters(false);
 
         $cacheKey = $cacheKeyNormalizer->normalize(
-            ['Yiisoft\Db\Connection\Connection::openFromPoolSequentially', $db->getDsn()]
+            ['Yiisoft\Db\Connection\Connection::openFromPoolSequentially', $db->getDriver()->getDsn()]
         );
-
         $this->assertFalse($this->cache->psr()->has($cacheKey));
 
         $db->open();
-
         $this->assertFalse($this->cache->psr()->has($cacheKey), 'Caching is disabled');
 
         $db->close();
@@ -224,7 +204,7 @@ final class ConnectionTest extends TestCase
             ['Yiisoft\Db\Connection\Connection::openFromPoolSequentially', 'host:invalid']
         );
 
-        $db->setMaster('1', $this->createConnection('host:invalid'));
+        $db->setMaster('1', $this->getConnection(false, 'host:invalid'));
 
         try {
             $db->open();

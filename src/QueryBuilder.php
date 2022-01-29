@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Yiisoft\Db\Mssql;
 
 use JsonException;
+use Yiisoft\Db\Connection\ConnectionInterface;
 use Yiisoft\Db\Constraint\Constraint;
 use Yiisoft\Db\Exception\Exception;
 use Yiisoft\Db\Exception\InvalidArgumentException;
@@ -333,13 +334,12 @@ final class QueryBuilder extends AbstractQueryBuilder
      */
     public function checkIntegrity(string $schema = '', string $table = '', bool $check = true): string
     {
-        /** @psalm-var Connection $db */
+        /** @var ConnectionPDOMssql $db */
         $db = $this->getDb();
 
         $enable = $check ? 'CHECK' : 'NOCHECK';
         $schema = $schema ?: $db->getSchema()->getDefaultSchema();
-        $tableNames = $db->getTableSchema($table)
-            ? [$table] : $db->getSchema()->getTableNames($schema);
+        $tableNames = $db->getTableSchema($table) ? [$table] : $db->getSchema()->getTableNames($schema);
         $viewNames = $db->getSchema()->getViewNames($schema);
         $tableNames = array_diff($tableNames, $viewNames);
         $command = '';

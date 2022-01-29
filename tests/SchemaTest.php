@@ -9,9 +9,9 @@ use Yiisoft\Db\Mssql\Schema;
 use function strpos;
 use Yiisoft\Db\Constraint\DefaultValueConstraint;
 use Yiisoft\Db\Mssql\TableSchema;
-use Yiisoft\Db\TestUtility\AnyValue;
+use Yiisoft\Db\TestSupport\AnyValue;
 
-use Yiisoft\Db\TestUtility\TestSchemaTrait;
+use Yiisoft\Db\TestSupport\TestSchemaTrait;
 
 /**
  * @group mssql
@@ -468,39 +468,29 @@ final class SchemaTest extends TestCase
         string $testTableName
     ): void {
         $db = $this->getConnection();
-        $schema = $this->getConnection()->getSchema();
+        $schema = $db->getSchema();
 
         $this->schemaCache->setEnable(true);
 
         $db->setTablePrefix($tablePrefix);
-
         $noCacheTable = $schema->getTableSchema($tableName, true);
-
         $this->assertInstanceOf(TableSchema::class, $noCacheTable);
 
         /* Compare */
         $db->setTablePrefix($testTablePrefix);
-
         $testNoCacheTable = $schema->getTableSchema($testTableName);
-
         $this->assertSame($noCacheTable, $testNoCacheTable);
 
         $db->setTablePrefix($tablePrefix);
-
         $schema->refreshTableSchema($tableName);
-
         $refreshedTable = $schema->getTableSchema($tableName, false);
-
         $this->assertInstanceOf(TableSchema::class, $refreshedTable);
         $this->assertNotSame($noCacheTable, $refreshedTable);
 
         /* Compare */
         $db->setTablePrefix($testTablePrefix);
-
         $schema->refreshTableSchema($testTablePrefix);
-
         $testRefreshedTable = $schema->getTableSchema($testTableName, false);
-
         $this->assertInstanceOf(TableSchema::class, $testRefreshedTable);
         $this->assertEquals($refreshedTable, $testRefreshedTable);
         $this->assertNotSame($testNoCacheTable, $testRefreshedTable);
