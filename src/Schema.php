@@ -6,6 +6,8 @@ namespace Yiisoft\Db\Mssql;
 
 use Throwable;
 use Yiisoft\Arrays\ArrayHelper;
+use Yiisoft\Db\Cache\SchemaCache;
+use Yiisoft\Db\Connection\ConnectionPDOInterface;
 use Yiisoft\Db\Constraint\CheckConstraint;
 use Yiisoft\Db\Constraint\Constraint;
 use Yiisoft\Db\Constraint\ConstraintFinderInterface;
@@ -119,6 +121,11 @@ final class Schema extends AbstractSchema implements ConstraintFinderInterface
     /** @var array|string */
     protected $columnQuoteCharacter = ['[', ']'];
 
+    public function __construct(private ConnectionPDOInterface $db, SchemaCache $schemaCache)
+    {
+        parent::__construct($db, $schemaCache);
+    }
+
     /**
      * Resolves the table name and schema name (if any).
      *
@@ -202,15 +209,15 @@ final class Schema extends AbstractSchema implements ConstraintFinderInterface
      */
     protected function findSchemaNames(): array
     {
-        static $sql = <<<'SQL'
-SELECT [s].[name]
-FROM [sys].[schemas] AS [s]
-INNER JOIN [sys].[database_principals] AS [p] ON [p].[principal_id] = [s].[principal_id]
-WHERE [p].[is_fixed_role] = 0 AND [p].[sid] IS NOT NULL
-ORDER BY [s].[name] ASC
-SQL;
+        $sql = <<<SQL
+        SELECT [s].[name]
+        FROM [sys].[schemas] AS [s]
+        INNER JOIN [sys].[database_principals] AS [p] ON [p].[principal_id] = [s].[principal_id]
+        WHERE [p].[is_fixed_role] = 0 AND [p].[sid] IS NOT NULL
+        ORDER BY [s].[name] ASC
+        SQL;
 
-        return $this->getDb()->createCommand($sql)->queryColumn();
+        return $this->db->createCommand($sql)->queryColumn();
     }
 
     /**
@@ -238,7 +245,7 @@ WHERE [t].[table_schema] = :schema AND [t].[table_type] IN ('BASE TABLE', 'VIEW'
 ORDER BY [t].[table_name]
 SQL;
 
-        $tables = $this->getDb()->createCommand($sql, [':schema' => $schema])->queryColumn();
+        $tables = $this->db->createCommand($sql, [':schema' => $schema])->queryColumn();
 
         $tables = array_map(static function ($item) {
             return '[' . $item . ']';
@@ -327,7 +334,7 @@ ORDER BY [ic].[key_ordinal] ASC
 SQL;
 
         $resolvedName = $this->resolveTableName($tableName);
-        $indexes = $this->getDb()->createCommand($sql, [':fullName' => $resolvedName->getFullName()])->queryAll();
+        $indexes = $this->db->createCommand($sql, [':fullName' => $resolvedName->getFullName()])->queryAll();
         $indexes = $this->normalizePdoRowKeyCase($indexes, true);
         $indexes = ArrayHelper::index($indexes, null, 'name');
 
@@ -395,7 +402,7 @@ SQL;
      */
     public function createSavepoint(string $name): void
     {
-        $this->getDb()->createCommand("SAVE TRANSACTION $name")->execute();
+        $this->db->createCommand("SAVE TRANSACTION $name")->execute();
     }
 
     /**
@@ -417,7 +424,7 @@ SQL;
      */
     public function rollBackSavepoint(string $name): void
     {
-        $this->getDb()->createCommand("ROLLBACK TRANSACTION $name")->execute();
+        $this->db->createCommand("ROLLBACK TRANSACTION $name")->execute();
     }
 
     /**
@@ -439,7 +446,7 @@ SQL;
      */
     public function createQueryBuilder(): QueryBuilder
     {
-        return new QueryBuilder($this->getDb());
+        return new QueryBuilder($this->db);
     }
 
     /**
@@ -556,7 +563,7 @@ SQL;
     protected function findColumns(TableSchema $table): bool
     {
         $columnsTableName = 'INFORMATION_SCHEMA.COLUMNS';
-        $whereSql = '[t1].[table_name] = ' . $this->getDb()->quoteValue($table->getName());
+        $whereSql = '[t1].[table_name] = ' . $this->db->quoteValue($table->getName());
 
         if ($table->getCatalogName() !== null) {
             $columnsTableName = "{$table->getCatalogName()}.{$columnsTableName}";
@@ -570,36 +577,36 @@ SQL;
         $columnsTableName = $this->quoteTableName($columnsTableName);
 
         $sql = <<<SQL
-SELECT
- [t1].[column_name],
- [t1].[is_nullable],
- CASE WHEN [t1].[data_type] IN ('char','varchar','nchar','nvarchar','binary','varbinary') THEN
-    CASE WHEN [t1].[character_maximum_length] = NULL OR [t1].[character_maximum_length] = -1 THEN
-        [t1].[data_type]
-    ELSE
-        [t1].[data_type] + '(' + LTRIM(RTRIM(CONVERT(CHAR,[t1].[character_maximum_length]))) + ')'
-    END
- ELSE
-    [t1].[data_type]
- END AS 'data_type',
- [t1].[column_default],
- COLUMNPROPERTY(OBJECT_ID([t1].[table_schema] + '.' + [t1].[table_name]), [t1].[column_name], 'IsIdentity') AS is_identity,
- (
-    SELECT CONVERT(VARCHAR, [t2].[value])
-		FROM [sys].[extended_properties] AS [t2]
-		WHERE
-			[t2].[class] = 1 AND
-			[t2].[class_desc] = 'OBJECT_OR_COLUMN' AND
-			[t2].[name] = 'MS_Description' AND
-			[t2].[major_id] = OBJECT_ID([t1].[TABLE_SCHEMA] + '.' + [t1].[table_name]) AND
-			[t2].[minor_id] = COLUMNPROPERTY(OBJECT_ID([t1].[TABLE_SCHEMA] + '.' + [t1].[TABLE_NAME]), [t1].[COLUMN_NAME], 'ColumnID')
- ) as comment
-FROM {$columnsTableName} AS [t1]
-WHERE {$whereSql}
-SQL;
+        SELECT
+            [t1].[column_name],
+            [t1].[is_nullable],
+        CASE WHEN [t1].[data_type] IN ('char','varchar','nchar','nvarchar','binary','varbinary') THEN
+        CASE WHEN [t1].[character_maximum_length] = NULL OR [t1].[character_maximum_length] = -1 THEN
+            [t1].[data_type]
+        ELSE
+            [t1].[data_type] + '(' + LTRIM(RTRIM(CONVERT(CHAR,[t1].[character_maximum_length]))) + ')'
+        END
+        ELSE
+            [t1].[data_type]
+        END AS 'data_type',
+        [t1].[column_default],
+        COLUMNPROPERTY(OBJECT_ID([t1].[table_schema] + '.' + [t1].[table_name]), [t1].[column_name], 'IsIdentity') AS is_identity,
+        (
+        SELECT CONVERT(VARCHAR, [t2].[value])
+        FROM [sys].[extended_properties] AS [t2]
+        WHERE
+        [t2].[class] = 1 AND
+        [t2].[class_desc] = 'OBJECT_OR_COLUMN' AND
+        [t2].[name] = 'MS_Description' AND
+        [t2].[major_id] = OBJECT_ID([t1].[TABLE_SCHEMA] + '.' + [t1].[table_name]) AND
+        [t2].[minor_id] = COLUMNPROPERTY(OBJECT_ID([t1].[TABLE_SCHEMA] + '.' + [t1].[TABLE_NAME]), [t1].[COLUMN_NAME], 'ColumnID')
+        ) as comment
+        FROM {$columnsTableName} AS [t1]
+        WHERE {$whereSql}
+        SQL;
 
         try {
-            $columns = $this->getDb()->createCommand($sql)->queryAll();
+            $columns = $this->db->createCommand($sql)->queryAll();
 
             if (empty($columns)) {
                 return false;
@@ -651,21 +658,21 @@ SQL;
         $tableConstraintsTableName = $this->quoteTableName($tableConstraintsTableName);
 
         $sql = <<<SQL
-SELECT
-    [kcu].[constraint_name] AS [index_name],
-    [kcu].[column_name] AS [field_name]
-FROM {$keyColumnUsageTableName} AS [kcu]
-LEFT JOIN {$tableConstraintsTableName} AS [tc] ON
-    [kcu].[table_schema] = [tc].[table_schema] AND
-    [kcu].[table_name] = [tc].[table_name] AND
-    [kcu].[constraint_name] = [tc].[constraint_name]
-WHERE
-    [tc].[constraint_type] = :type AND
-    [kcu].[table_name] = :tableName AND
-    [kcu].[table_schema] = :schemaName
-SQL;
+        SELECT
+            [kcu].[constraint_name] AS [index_name],
+            [kcu].[column_name] AS [field_name]
+        FROM {$keyColumnUsageTableName} AS [kcu]
+        LEFT JOIN {$tableConstraintsTableName} AS [tc] ON
+            [kcu].[table_schema] = [tc].[table_schema] AND
+            [kcu].[table_name] = [tc].[table_name] AND
+            [kcu].[constraint_name] = [tc].[constraint_name]
+        WHERE
+            [tc].[constraint_type] = :type AND
+            [kcu].[table_name] = :tableName AND
+            [kcu].[table_schema] = :schemaName
+        SQL;
 
-        return $this->getDb()->createCommand(
+        return $this->db->createCommand(
             $sql,
             [
                 ':tableName' => $table->getName(),
@@ -732,7 +739,7 @@ WHERE
 	[fk].[parent_object_id] = OBJECT_ID(:object)
 SQL;
 
-        $rows = $this->getDb()->createCommand($sql, [':object' => $object])->queryAll();
+        $rows = $this->db->createCommand($sql, [':object' => $object])->queryAll();
 
         $table->foreignKeys([]);
 
@@ -769,7 +776,7 @@ WHERE [t].[table_schema] = :schema AND [t].[table_type] = 'VIEW'
 ORDER BY [t].[table_name]
 SQL;
 
-        $views = $this->getDb()->createCommand($sql, [':schema' => $schema])->queryColumn();
+        $views = $this->db->createCommand($sql, [':schema' => $schema])->queryColumn();
         $views = array_map(static function ($item) {
             return '[' . $item . ']';
         }, $views);
@@ -864,7 +871,7 @@ ORDER BY [kic].[key_ordinal] ASC, [fc].[constraint_column_id] ASC
 SQL;
 
         $resolvedName = $this->resolveTableName($tableName);
-        $constraints = $this->getDb()->createCommand($sql, [':fullName' => $resolvedName->getFullName()])->queryAll();
+        $constraints = $this->db->createCommand($sql, [':fullName' => $resolvedName->getFullName()])->queryAll();
         $constraints = $this->normalizePdoRowKeyCase($constraints, true);
         $constraints = ArrayHelper::index($constraints, null, ['type', 'name']);
         $result = [
@@ -959,12 +966,12 @@ SQL;
      */
     public function insert(string $table, array $columns)
     {
-        $command = $this->getDb()->createCommand()->insert($table, $columns);
+        $command = $this->db->createCommand()->insert($table, $columns);
         if (!$command->execute()) {
             return false;
         }
 
-        $isVersion2005orLater = version_compare($this->getDb()->getSchema()->getServerVersion(), '9', '>=');
+        $isVersion2005orLater = version_compare($this->db->getSchema()->getServerVersion(), '9', '>=');
         $inserted = $isVersion2005orLater ? $command->getPdoStatement()->fetch() : [];
 
         $tableSchema = $this->getTableSchema($table);
