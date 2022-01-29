@@ -52,7 +52,6 @@ class TestCase extends AbstractTestCase
         return $this->db;
     }
 
-
     protected function tearDown(): void
     {
         parent::tearDown();
