@@ -43,7 +43,7 @@ final class QueryBuilderTest extends TestCase
      */
     protected function getQueryBuilder(ConnectionInterface $db): QueryBuilder
     {
-        return new QueryBuilder($this->getConnection($db));
+        return new QueryBuilder($db);
     }
 
     protected function getCommmentsFromTable(string $table): array
@@ -53,7 +53,7 @@ final class QueryBuilderTest extends TestCase
             FROM fn_listextendedproperty (
                 N'MS_description',
                 'SCHEMA', N'dbo',
-                'TABLE', N" . $db->quoteValue($table) . ',
+                'TABLE', N" . $db->getQuoter()->quoteValue($table) . ',
                 DEFAULT, DEFAULT
         )';
         return $db->createCommand($sql)->queryAll();
@@ -66,8 +66,8 @@ final class QueryBuilderTest extends TestCase
             FROM fn_listextendedproperty (
                 N'MS_description',
                 'SCHEMA', N'dbo',
-                'TABLE', N" . $db->quoteValue($table) . ",
-                'COLUMN', N" . $db->quoteValue($column) . '
+                'TABLE', N" . $db->getQuoter()->quoteValue($table) . ",
+                'COLUMN', N" . $db->getQuoter()->quoteValue($column) . '
         )';
         return $db->createCommand($sql)->queryAll();
     }
@@ -271,7 +271,7 @@ final class QueryBuilderTest extends TestCase
     public function testAddDropCheck(string $sql, Closure $builder): void
     {
         $db = $this->getConnection();
-        $this->assertSame($db->quoteSql($sql), $builder($this->getQueryBuilder($db)));
+        $this->assertSame($db->getQuoter()->quoteSql($sql), $builder($this->getQueryBuilder($db)));
     }
 
     /**
@@ -283,7 +283,7 @@ final class QueryBuilderTest extends TestCase
     public function testAddDropForeignKey(string $sql, Closure $builder): void
     {
         $db = $this->getConnection();
-        $this->assertSame($db->quoteSql($sql), $builder($this->getQueryBuilder($db)));
+        $this->assertSame($db->getQuoter()->quoteSql($sql), $builder($this->getQueryBuilder($db)));
     }
 
     /**
@@ -295,7 +295,7 @@ final class QueryBuilderTest extends TestCase
     public function testAddDropPrimaryKey(string $sql, Closure $builder): void
     {
         $db = $this->getConnection();
-        $this->assertSame($db->quoteSql($sql), $builder($this->getQueryBuilder($db)));
+        $this->assertSame($db->getQuoter()->quoteSql($sql), $builder($this->getQueryBuilder($db)));
     }
 
     /**
@@ -307,7 +307,7 @@ final class QueryBuilderTest extends TestCase
     public function testAddDropUnique(string $sql, Closure $builder): void
     {
         $db = $this->getConnection();
-        $this->assertSame($db->quoteSql($sql), $builder($this->getQueryBuilder($db)));
+        $this->assertSame($db->getQuoter()->quoteSql($sql), $builder($this->getQueryBuilder($db)));
     }
 
     public function batchInsertProvider()
@@ -472,7 +472,7 @@ final class QueryBuilderTest extends TestCase
     public function testCreateDropIndex(string $sql, Closure $builder): void
     {
         $db = $this->getConnection();
-        $this->assertSame($db->quoteSql($sql), $builder($this->getQueryBuilder($db)));
+        $this->assertSame($db->getQuoter()->quoteSql($sql), $builder($this->getQueryBuilder($db)));
     }
 
     /**

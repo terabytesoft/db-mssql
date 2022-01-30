@@ -343,19 +343,11 @@ final class CommandTest extends TestCase
      */
     public function testInsertVarbinary($expectedData, $testData)
     {
-        $db = $this->getConnection();
-
+        $db = $this->getConnection(true);
         $db->createCommand()->delete('T_upsert_varbinary')->execute();
-
         $db->createCommand()->insert('T_upsert_varbinary', ['id' => 1, 'blob_col' => $testData])->execute();
-
-        $query = (new Query($db))
-            ->select(['blob_col'])
-            ->from('T_upsert_varbinary')
-            ->where(['id' => 1]);
-
+        $query = (new Query($db))->select(['blob_col'])->from('T_upsert_varbinary')->where(['id' => 1]);
         $resultData = $query->createCommand()->queryOne();
-
         $this->assertEquals($expectedData, $resultData['blob_col']);
     }
 

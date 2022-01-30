@@ -115,12 +115,6 @@ final class Schema extends AbstractSchema implements ConstraintFinderInterface
         'table' => self::TYPE_STRING,
     ];
 
-    /** @var array|string */
-    protected $tableQuoteCharacter = ['[', ']'];
-
-    /** @var array|string */
-    protected $columnQuoteCharacter = ['[', ']'];
-
     public function __construct(private ConnectionPDOInterface $db, SchemaCache $schemaCache)
     {
         parent::__construct($db, $schemaCache);
@@ -238,7 +232,7 @@ final class Schema extends AbstractSchema implements ConstraintFinderInterface
             $schema = $this->defaultSchema;
         }
 
-        $sql = <<<'SQL'
+        $sql = <<<SQL
 SELECT [t].[table_name]
 FROM [INFORMATION_SCHEMA].[TABLES] AS [t]
 WHERE [t].[table_schema] = :schema AND [t].[table_type] IN ('BASE TABLE', 'VIEW')
@@ -272,8 +266,7 @@ SQL;
 
         if ($this->findColumns($table)) {
             $this->findForeignKeys($table);
-
-            return $table;
+                return $table;
         }
 
         return null;
@@ -318,7 +311,7 @@ SQL;
      */
     protected function loadTableIndexes(string $tableName): array
     {
-        static $sql = <<<'SQL'
+        $sql = <<<SQL
 SELECT
     [i].[name] AS [name],
     [iccol].[name] AS [column_name],
@@ -332,7 +325,6 @@ INNER JOIN [sys].[columns] AS [iccol]
 WHERE [i].[object_id] = OBJECT_ID(:fullName)
 ORDER BY [ic].[key_ordinal] ASC
 SQL;
-
         $resolvedName = $this->resolveTableName($tableName);
         $indexes = $this->db->createCommand($sql, [':fullName' => $resolvedName->getFullName()])->queryAll();
         $indexes = $this->normalizePdoRowKeyCase($indexes, true);
@@ -437,16 +429,6 @@ SQL;
     protected function createColumnSchema(): ColumnSchema
     {
         return new ColumnSchema();
-    }
-
-    /**
-     * Creates a query builder for the MSSQL database.
-     *
-     * @return QueryBuilder query builder interface.
-     */
-    public function createQueryBuilder(): QueryBuilder
-    {
-        return new QueryBuilder($this->db);
     }
 
     /**
@@ -563,7 +545,7 @@ SQL;
     protected function findColumns(TableSchema $table): bool
     {
         $columnsTableName = 'INFORMATION_SCHEMA.COLUMNS';
-        $whereSql = '[t1].[table_name] = ' . $this->db->quoteValue($table->getName());
+        $whereSql = '[t1].[table_name] = ' . $this->db->getQuoter()->quoteValue($table->getName());
 
         if ($table->getCatalogName() !== null) {
             $columnsTableName = "{$table->getCatalogName()}.{$columnsTableName}";
@@ -574,7 +556,7 @@ SQL;
             $whereSql .= " AND [t1].[table_schema] = '{$table->getSchemaName()}'";
         }
 
-        $columnsTableName = $this->quoteTableName($columnsTableName);
+        $columnsTableName = $this->db->getQuoter()->quoteTableName($columnsTableName);
 
         $sql = <<<SQL
         SELECT
@@ -654,8 +636,8 @@ SQL;
             $tableConstraintsTableName = $table->getCatalogName() . '.' . $tableConstraintsTableName;
         }
 
-        $keyColumnUsageTableName = $this->quoteTableName($keyColumnUsageTableName);
-        $tableConstraintsTableName = $this->quoteTableName($tableConstraintsTableName);
+        $keyColumnUsageTableName = $this->db->getQuoter()->quoteTableName($keyColumnUsageTableName);
+        $tableConstraintsTableName = $this->db->getQuoter()->quoteTableName($tableConstraintsTableName);
 
         $sql = <<<SQL
         SELECT
@@ -719,7 +701,7 @@ SQL;
          * Please refer to the following page for more details:
          * {@see http://msdn2.microsoft.com/en-us/library/aa175805(SQL.80).aspx}
          */
-        $sql = <<<'SQL'
+        $sql = <<<SQL
 SELECT
 	[fk].[name] AS [fk_name],
 	[cp].[name] AS [fk_column_name],
@@ -769,7 +751,7 @@ SQL;
             $schema = $this->defaultSchema;
         }
 
-        $sql = <<<'SQL'
+        $sql = <<<SQL
 SELECT [t].[table_name]
 FROM [INFORMATION_SCHEMA].[TABLES] AS [t]
 WHERE [t].[table_schema] = :schema AND [t].[table_type] = 'VIEW'
@@ -830,7 +812,7 @@ SQL;
      */
     private function loadTableConstraints(string $tableName, string $returnType)
     {
-        static $sql = <<<'SQL'
+        $sql = <<<SQL
 SELECT
     [o].[name] AS [name],
     COALESCE([ccol].[name], [dcol].[name], [fccol].[name], [kiccol].[name]) AS [column_name],

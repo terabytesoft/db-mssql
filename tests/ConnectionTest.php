@@ -53,66 +53,70 @@ final class ConnectionTest extends TestCase
     public function testQuoteValue(): void
     {
         $db = $this->getConnection();
+        $quoter = $db->getQuoter();
 
-        $this->assertEquals(123, $db->quoteValue(123));
-        $this->assertEquals("'string'", $db->quoteValue('string'));
-        $this->assertEquals("'It''s interesting'", $db->quoteValue("It's interesting"));
+        $this->assertEquals(123, $quoter->quoteValue(123));
+        $this->assertEquals("'string'", $quoter->quoteValue('string'));
+        $this->assertEquals("'It''s interesting'", $quoter->quoteValue("It's interesting"));
     }
 
     public function testQuoteTableName(): void
     {
         $db = $this->getConnection();
+        $quoter = $db->getQuoter();
 
-        $this->assertEquals('[table]', $db->quoteTableName('table'));
-        $this->assertEquals('[table]', $db->quoteTableName('[table]'));
-        $this->assertEquals('[schema].[table]', $db->quoteTableName('schema.table'));
-        $this->assertEquals('[schema].[table]', $db->quoteTableName('schema.[table]'));
-        $this->assertEquals('[schema].[table]', $db->quoteTableName('[schema].[table]'));
-        $this->assertEquals('{{table}}', $db->quoteTableName('{{table}}'));
-        $this->assertEquals('(table)', $db->quoteTableName('(table)'));
+        $this->assertEquals('[table]', $quoter->quoteTableName('table'));
+        $this->assertEquals('[table]', $quoter->quoteTableName('[table]'));
+        $this->assertEquals('[schema].[table]', $quoter->quoteTableName('schema.table'));
+        $this->assertEquals('[schema].[table]', $quoter->quoteTableName('schema.[table]'));
+        $this->assertEquals('[schema].[table]', $quoter->quoteTableName('[schema].[table]'));
+        $this->assertEquals('{{table}}', $quoter->quoteTableName('{{table}}'));
+        $this->assertEquals('(table)', $quoter->quoteTableName('(table)'));
     }
 
     public function testQuoteColumnName(): void
     {
         $db = $this->getConnection();
+        $quoter = $db->getQuoter();
 
-        $this->assertEquals('[column]', $db->quoteColumnName('column'));
-        $this->assertEquals('[column]', $db->quoteColumnName('[column]'));
-        $this->assertEquals('[[column]]', $db->quoteColumnName('[[column]]'));
-        $this->assertEquals('{{column}}', $db->quoteColumnName('{{column}}'));
-        $this->assertEquals('(column)', $db->quoteColumnName('(column)'));
-        $this->assertEquals('[column]', $db->quoteSql('[[column]]'));
-        $this->assertEquals('[column]', $db->quoteSql('{{column}}'));
+        $this->assertEquals('[column]', $quoter->quoteColumnName('column'));
+        $this->assertEquals('[column]', $quoter->quoteColumnName('[column]'));
+        $this->assertEquals('[[column]]', $quoter->quoteColumnName('[[column]]'));
+        $this->assertEquals('{{column}}', $quoter->quoteColumnName('{{column}}'));
+        $this->assertEquals('(column)', $quoter->quoteColumnName('(column)'));
+        $this->assertEquals('[column]', $quoter->quoteSql('[[column]]'));
+        $this->assertEquals('[column]', $quoter->quoteSql('{{column}}'));
     }
 
     public function testQuoteFullColumnName(): void
     {
         $db = $this->getConnection();
+        $quoter = $db->getQuoter();
 
-        $this->assertEquals('[table].[column]', $db->quoteColumnName('table.column'));
-        $this->assertEquals('[table].[column]', $db->quoteColumnName('table.[column]'));
-        $this->assertEquals('[table].[column]', $db->quoteColumnName('[table].column'));
-        $this->assertEquals('[table].[column]', $db->quoteColumnName('[table].[column]'));
-        $this->assertEquals('[[table.column]]', $db->quoteColumnName('[[table.column]]'));
-        $this->assertEquals('{{table}}.[column]', $db->quoteColumnName('{{table}}.column'));
-        $this->assertEquals('{{table}}.[column]', $db->quoteColumnName('{{table}}.[column]'));
-        $this->assertEquals('{{table}}.[[column]]', $db->quoteColumnName('{{table}}.[[column]]'));
-        $this->assertEquals('{{%table}}.[column]', $db->quoteColumnName('{{%table}}.column'));
-        $this->assertEquals('{{%table}}.[column]', $db->quoteColumnName('{{%table}}.[column]'));
-        $this->assertEquals('[column.name]', $db->quoteColumnName('[column.name]'));
+        $this->assertEquals('[table].[column]', $quoter->quoteColumnName('table.column'));
+        $this->assertEquals('[table].[column]', $quoter->quoteColumnName('table.[column]'));
+        $this->assertEquals('[table].[column]', $quoter->quoteColumnName('[table].column'));
+        $this->assertEquals('[table].[column]', $quoter->quoteColumnName('[table].[column]'));
+        $this->assertEquals('[[table.column]]', $quoter->quoteColumnName('[[table.column]]'));
+        $this->assertEquals('{{table}}.[column]', $quoter->quoteColumnName('{{table}}.column'));
+        $this->assertEquals('{{table}}.[column]', $quoter->quoteColumnName('{{table}}.[column]'));
+        $this->assertEquals('{{table}}.[[column]]', $quoter->quoteColumnName('{{table}}.[[column]]'));
+        $this->assertEquals('{{%table}}.[column]', $quoter->quoteColumnName('{{%table}}.column'));
+        $this->assertEquals('{{%table}}.[column]', $quoter->quoteColumnName('{{%table}}.[column]'));
+        $this->assertEquals('[column.name]', $quoter->quoteColumnName('[column.name]'));
         $this->assertEquals(
             '[column.name.with.dots]',
-            $db->quoteColumnName('[column.name.with.dots]')
+            $quoter->quoteColumnName('[column.name.with.dots]')
         );
         $this->assertEquals(
             '[table].[column.name.with.dots]',
-            $db->quoteColumnName('[table].[column.name.with.dots]')
+            $quoter->quoteColumnName('[table].[column.name.with.dots]')
         );
-        $this->assertEquals('[table].[column]', $db->quoteSql('[[table.column]]'));
-        $this->assertEquals('[table].[column]', $db->quoteSql('{{table}}.[[column]]'));
-        $this->assertEquals('[table].[column]', $db->quoteSql('{{table}}.[column]'));
-        $this->assertEquals('[table].[column]', $db->quoteSql('{{%table}}.[[column]]'));
-        $this->assertEquals('[table].[column]', $db->quoteSql('{{%table}}.[column]'));
+        $this->assertEquals('[table].[column]', $quoter->quoteSql('[[table.column]]'));
+        $this->assertEquals('[table].[column]', $quoter->quoteSql('{{table}}.[[column]]'));
+        $this->assertEquals('[table].[column]', $quoter->quoteSql('{{table}}.[column]'));
+        $this->assertEquals('[table].[column]', $quoter->quoteSql('{{%table}}.[[column]]'));
+        $this->assertEquals('[table].[column]', $quoter->quoteSql('{{%table}}.[column]'));
     }
 
     /**

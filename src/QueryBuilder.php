@@ -65,7 +65,7 @@ final class QueryBuilder extends AbstractQueryBuilder
 
     public function __construct(private ConnectionInterface $db)
     {
-        parent::__construct($db);
+        parent::__construct($db->getQuoter(), $db->getSchema());
     }
 
     protected function defaultExpressionBuilders(): array
@@ -100,7 +100,7 @@ final class QueryBuilder extends AbstractQueryBuilder
             return $orderBy === '' ? $sql : $sql . $this->separator . $orderBy;
         }
 
-        if (version_compare($this->db->getSchema()->getServerVersion(), '11', '<')) {
+        if (version_compare($this->db->getServerVersion(), '11', '<')) {
             return $this->oldBuildOrderByAndLimit($sql, $orderBy, $limit, $offset, $params);
         }
 
@@ -208,7 +208,7 @@ final class QueryBuilder extends AbstractQueryBuilder
     public function renameTable(string $oldName, string $newName): string
     {
         return 'sp_rename ' .
-            $this->db->quoteTableName($oldName) . ', ' . $this->db->quoteTableName($newName);
+            $this->db->getQuoter()->quoteTableName($oldName) . ', ' . $this->db->getQuoter()->quoteTableName($newName);
     }
 
     /**
@@ -222,9 +222,9 @@ final class QueryBuilder extends AbstractQueryBuilder
      */
     public function renameColumn(string $table, string $oldName, string $newName): string
     {
-        $table = $this->db->quoteTableName($table);
-        $oldName = $this->db->quoteColumnName($oldName);
-        $newName = $this->db->quoteColumnName($newName);
+        $table = $this->db->getQuoter()->quoteTableName($table);
+        $oldName = $this->db->getQuoter()->quoteColumnName($oldName);
+        $newName = $this->db->getQuoter()->quoteColumnName($newName);
 
         return "sp_rename '{$table}.{$oldName}', {$newName}, 'COLUMN'";
     }
@@ -248,8 +248,8 @@ final class QueryBuilder extends AbstractQueryBuilder
     {
         $type = $this->getColumnType($type);
 
-        return 'ALTER TABLE ' . $this->db->quoteTableName($table) . ' ALTER COLUMN '
-            . $this->db->quoteColumnName($column) . ' '
+        return 'ALTER TABLE ' . $this->db->getQuoter()->quoteTableName($table) . ' ALTER COLUMN '
+            . $this->db->getQuoter()->quoteColumnName($column) . ' '
             . $this->getColumnType($type);
     }
 
@@ -269,9 +269,9 @@ final class QueryBuilder extends AbstractQueryBuilder
      */
     public function addDefaultValue(string $name, string $table, string $column, $value): string
     {
-        return 'ALTER TABLE ' . $this->db->quoteTableName($table) . ' ADD CONSTRAINT '
-            . $this->db->quoteColumnName($name) . ' DEFAULT ' . $this->db->quoteValue($value) . ' FOR '
-            . $this->db->quoteColumnName($column);
+        return 'ALTER TABLE ' . $this->db->getQuoter()->quoteTableName($table) . ' ADD CONSTRAINT '
+            . $this->db->getQuoter()->quoteColumnName($name) . ' DEFAULT ' . $this->db->getQuoter()->quoteValue($value)
+            . ' FOR ' . $this->db->getQuoter()->quoteColumnName($column);
     }
 
     /**
@@ -286,8 +286,9 @@ final class QueryBuilder extends AbstractQueryBuilder
      */
     public function dropDefaultValue(string $name, string $table): string
     {
-        return 'ALTER TABLE ' .
-            $this->db->quoteTableName($table) . ' DROP CONSTRAINT ' . $this->db->quoteColumnName($name);
+        return 'ALTER TABLE '
+            . $this->db->getQuoter()->quoteTableName($table) . ' DROP CONSTRAINT '
+            . $this->db->getQuoter()->quoteColumnName($name);
     }
 
     /**
@@ -307,14 +308,14 @@ final class QueryBuilder extends AbstractQueryBuilder
      */
     public function resetSequence(string $tableName, $value = null): string
     {
-        $table = $this->db->getTableSchema($tableName);
+        $table = $this->db->getQuoter()->getTableSchema($tableName);
 
         if ($table !== null && $table->getSequenceName() !== null) {
-            $tableName = $this->db->quoteTableName($tableName);
+            $tableName = $this->db->getQuoter()->quoteTableName($tableName);
 
             if ($value === null) {
                 $pk = $table->getPrimaryKey();
-                $key = $this->db->quoteColumnName(reset($pk));
+                $key = $this->db->getQuoter()->quoteColumnName(reset($pk));
                 $value = "(SELECT COALESCE(MAX({$key}),0) FROM {$tableName})+1";
             } else {
                 $value = (int)$value;
@@ -350,7 +351,7 @@ final class QueryBuilder extends AbstractQueryBuilder
         $command = '';
 
         foreach ($tableNames as $tableName) {
-            $tableName = $db->quoteTableName("{$schema}.{$tableName}");
+            $tableName = $db->getQuoter()->quoteTableName("{$schema}.{$tableName}");
             $command .= "ALTER TABLE $tableName $enable CONSTRAINT ALL; ";
         }
 
@@ -380,9 +381,9 @@ final class QueryBuilder extends AbstractQueryBuilder
         }
 
         $schemaName = $tableSchema->getSchemaName() ? "N'" . $tableSchema->getSchemaName() . "'" : 'SCHEMA_NAME()';
-        $tableName = 'N' . $this->db->quoteValue($tableSchema->getName());
-        $columnName = $column ? 'N' . $this->db->quoteValue($column) : null;
-        $comment = 'N' . $this->db->quoteValue($comment);
+        $tableName = 'N' . $this->db->getQuoter()->quoteValue($tableSchema->getName());
+        $columnName = $column ? 'N' . $this->db->getQuoter()->quoteValue($column) : null;
+        $comment = 'N' . $this->db->getQuoter()->quoteValue($comment);
 
         $functionParams = "
             @name = N'MS_description',
@@ -463,8 +464,8 @@ final class QueryBuilder extends AbstractQueryBuilder
         }
 
         $schemaName = $tableSchema->getSchemaName() ? "N'" . $tableSchema->getSchemaName() . "'" : 'SCHEMA_NAME()';
-        $tableName = 'N' . $this->db->quoteValue($tableSchema->getName());
-        $columnName = $column ? 'N' . $this->db->quoteValue($column) : null;
+        $tableName = 'N' . $this->db->getQuoter()->quoteValue($tableSchema->getName());
+        $columnName = $column ? 'N' . $this->db->getQuoter()->quoteValue($column) : null;
 
         return "
             IF EXISTS (
@@ -571,11 +572,11 @@ final class QueryBuilder extends AbstractQueryBuilder
      */
     public function insert(string $table, $columns, array &$params = []): string
     {
-        $version2005orLater = version_compare($this->db->getSchema()->getServerVersion(), '9', '>=');
+        $version2005orLater = version_compare($this->db->getServerVersion(), '9', '>=');
 
         [$names, $placeholders, $values, $params] = $this->prepareInsertValues($table, $columns, $params);
 
-        $sql = 'INSERT INTO ' . $this->db->quoteTableName($table)
+        $sql = 'INSERT INTO ' . $this->db->getQuoter()->quoteTableName($table)
             . (!empty($names) ? ' (' . implode(', ', $names) . ')' : '')
             . ($version2005orLater ? ' OUTPUT INSERTED.* INTO @temporary_inserted' : '')
             . (!empty($placeholders) ? ' VALUES (' . implode(', ', $placeholders) . ')' : $values);
@@ -584,8 +585,9 @@ final class QueryBuilder extends AbstractQueryBuilder
             $schema = $this->db->getTableSchema($table);
 
             $cols = [];
+
             foreach ($schema->getColumns() as $column) {
-                $cols[] = $this->db->quoteColumnName($column->getName()) . ' '
+                $cols[] = $this->db->getQuoter()->quoteColumnName($column->getName()) . ' '
                     . $column->getDbType()
                     . (in_array(
                         $column->getDbType(),
@@ -653,13 +655,13 @@ final class QueryBuilder extends AbstractQueryBuilder
         }
 
         $onCondition = ['or'];
-        $quotedTableName = $this->db->quoteTableName($table);
+        $quotedTableName = $this->db->getQuoter()->quoteTableName($table);
 
         foreach ($constraints as $constraint) {
             $constraintCondition = ['and'];
 
             foreach ($constraint->getColumnNames() as $name) {
-                $quotedName = $this->db->quoteColumnName($name);
+                $quotedName = $this->db->getQuoter()->quoteColumnName($name);
                 $constraintCondition[] = "$quotedTableName.$quotedName=[EXCLUDED].$quotedName";
             }
 
@@ -670,7 +672,7 @@ final class QueryBuilder extends AbstractQueryBuilder
 
         [, $placeholders, $values, $params] = $this->prepareInsertValues($table, $insertColumns, $params);
 
-        $mergeSql = 'MERGE ' . $this->db->quoteTableName($table) . ' WITH (HOLDLOCK) '
+        $mergeSql = 'MERGE ' . $this->db->getQuoter()->quoteTableName($table) . ' WITH (HOLDLOCK) '
             . 'USING (' . (!empty($placeholders)
             ? 'VALUES (' . implode(', ', $placeholders) . ')'
             : ltrim($values, ' ')) . ') AS [EXCLUDED] (' . implode(', ', $insertNames) . ') ' . "ON ($on)";
@@ -678,7 +680,7 @@ final class QueryBuilder extends AbstractQueryBuilder
         $insertValues = [];
 
         foreach ($insertNames as $name) {
-            $quotedName = $this->db->quoteColumnName($name);
+            $quotedName = $this->db->getQuoter()->quoteColumnName($name);
 
             if (strrpos($quotedName, '.') === false) {
                 $quotedName = '[EXCLUDED].' . $quotedName;
@@ -697,7 +699,7 @@ final class QueryBuilder extends AbstractQueryBuilder
             $updateColumns = [];
 
             foreach ($updateNames as $name) {
-                $quotedName = $this->db->quoteColumnName($name);
+                $quotedName = $this->db->getQuoter()->quoteColumnName($name);
                 if (strrpos($quotedName, '.') === false) {
                     $quotedName = '[EXCLUDED].' . $quotedName;
                 }
@@ -771,12 +773,12 @@ final class QueryBuilder extends AbstractQueryBuilder
     /**
      * Extracts table alias if there is one or returns false
      *
-     * @param $table
+     * @param string $table
      *
      * @return array|bool
      * @psalm-return array<array-key, string>|bool
      */
-    protected function extractAlias($table)
+    protected function extractAlias(string $table): array|bool
     {
         if (preg_match('/^\[.*]$/', $table)) {
             return false;

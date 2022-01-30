@@ -359,9 +359,8 @@ final class SchemaTest extends TestCase
      */
     public function testQuoteTableName(string $name, string $expectedName): void
     {
-        $schema = $this->getConnection()->getSchema();
-        $quotedName = $schema->quoteTableName($name);
-
+        $db = $this->getConnection();
+        $quotedName = $db->getQuoter()->quoteTableName($name);
         $this->assertEquals($expectedName, $quotedName);
     }
 

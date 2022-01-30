@@ -52,13 +52,11 @@ final class InConditionBuilder extends AbstractInConditionBuilder
      */
     protected function buildCompositeInCondition(?string $operator, $columns, $values, array &$params = []): string
     {
-        /** @var ConnectionInterface $db */
-        $db = $this->queryBuilder->getDb();
-
         $quotedColumns = [];
+
         foreach ($columns as $i => $column) {
             $quotedColumns[$i] = strpos($column, '(') === false
-                ? $db->quoteColumnName($column) : $column;
+                ? $this->queryBuilder->getQuoter()->quoteColumnName($column) : $column;
         }
 
         $vss = [];
