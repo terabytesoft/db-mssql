@@ -308,7 +308,7 @@ final class QueryBuilder extends AbstractQueryBuilder
      */
     public function resetSequence(string $tableName, $value = null): string
     {
-        $table = $this->db->getQuoter()->getTableSchema($tableName);
+        $table = $this->db->getSchema()->getTableSchema($tableName);
 
         if ($table !== null && $table->getSequenceName() !== null) {
             $tableName = $this->db->getQuoter()->quoteTableName($tableName);

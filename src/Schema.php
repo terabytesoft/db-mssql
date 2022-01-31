@@ -916,27 +916,6 @@ SQL;
     }
 
     /**
-     * Quotes a column name for use in a query.
-     *
-     * If the column name contains prefix, the prefix will also be properly quoted. If the column name is already quoted
-     * or contains '(', '[[' or '{{', then this method will do nothing.
-     *
-     * @param string $name column name.
-     *
-     * @return string the properly quoted column name.
-     *
-     * {@see quoteSimpleColumnName()}
-     */
-    public function quoteColumnName(string $name): string
-    {
-        if (preg_match('/^\[.*]$/', $name)) {
-            return $name;
-        }
-
-        return parent::quoteColumnName($name);
-    }
-
-    /**
      * Executes the INSERT command, returning primary key values.
      *
      * @param string $table the table that new rows will be inserted into.
