@@ -154,7 +154,7 @@ final class ConnectionPDOMssql extends Connection implements ConnectionPDOInterf
     public function getQuoter(): Quoter
     {
         if ($this->quoter === null) {
-            $this->quoter = new Quoter(['[', ']'], ['[', ']'], $this->driver, $this->getTablePrefix());
+            $this->quoter = new Quoter(['[', ']'], ['[', ']'], $this->getTablePrefix());
         }
 
         return $this->quoter;
