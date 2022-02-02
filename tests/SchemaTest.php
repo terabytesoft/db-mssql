@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Yiisoft\Db\Mssql\Tests;
 
 use PDO;
-use Yiisoft\Db\Mssql\Schema;
-use function strpos;
 use Yiisoft\Db\Constraint\DefaultValueConstraint;
+use Yiisoft\Db\Mssql\PDO\SchemaPDOMssql;
 use Yiisoft\Db\Mssql\TableSchema;
 use Yiisoft\Db\TestSupport\AnyValue;
-
 use Yiisoft\Db\TestSupport\TestSchemaTrait;
+
+use function strpos;
 
 /**
  * @group mssql
@@ -505,7 +505,7 @@ final class SchemaTest extends TestCase
 
         $db->createCommand()->createTable(
             'testPKTable',
-            ['id' => Schema::TYPE_PK, 'bar' => Schema::TYPE_INTEGER]
+            ['id' => SchemaPDOMssql::TYPE_PK, 'bar' => SchemaPDOMssql::TYPE_INTEGER]
         )->execute();
 
         $insertResult = $db->getSchema()->insert('testPKTable', ['bar' => 1]);

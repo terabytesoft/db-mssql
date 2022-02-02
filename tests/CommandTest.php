@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Yiisoft\Db\Mssql\Tests;
 
 use PDO;
-use Yiisoft\Db\Pdo\PdoValue;
-use function trim;
 use yiisoft\Db\Exception\InvalidArgumentException;
-use Yiisoft\Db\Mssql\Schema;
+use Yiisoft\Db\Mssql\PDO\SchemaPDOMssql;
+use Yiisoft\Db\Pdo\PdoValue;
 use Yiisoft\Db\Query\Query;
-
 use Yiisoft\Db\TestSupport\TestCommandTrait;
+
+use function trim;
 
 /**
  * @group mssql
@@ -152,12 +152,12 @@ final class CommandTest extends TestCase
 
         $db->createCommand()->createTable(
             'testAlterTable',
-            ['id' => Schema::TYPE_PK, 'bar' => Schema::TYPE_INTEGER]
+            ['id' => SchemaPDOMssql::TYPE_PK, 'bar' => SchemaPDOMssql::TYPE_INTEGER]
         )->execute();
 
         $db->createCommand()->insert('testAlterTable', ['bar' => 1])->execute();
 
-        $db->createCommand()->alterColumn('testAlterTable', 'bar', Schema::TYPE_STRING)->execute();
+        $db->createCommand()->alterColumn('testAlterTable', 'bar', SchemaPDOMssql::TYPE_STRING)->execute();
 
         $db->createCommand()->insert('testAlterTable', ['bar' => 'hello'])->execute();
 

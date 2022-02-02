@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Yiisoft\Db\Mssql;
+namespace Yiisoft\Db\Mssql\PDO;
 
 use JsonException;
 use Yiisoft\Db\Connection\ConnectionInterface;
@@ -34,33 +34,33 @@ use function version_compare;
 /**
  * QueryBuilder is the query builder for MS SQL Server databases (version 2008 and above).
  */
-final class QueryBuilder extends AbstractQueryBuilder
+final class QueryBuilderPDOMssql extends AbstractQueryBuilder
 {
     /**
      * @var array mapping from abstract column types (keys) to physical column types (values).
      */
     protected array $typeMap = [
-        Schema::TYPE_PK => 'int IDENTITY PRIMARY KEY',
-        Schema::TYPE_UPK => 'int IDENTITY PRIMARY KEY',
-        Schema::TYPE_BIGPK => 'bigint IDENTITY PRIMARY KEY',
-        Schema::TYPE_UBIGPK => 'bigint IDENTITY PRIMARY KEY',
-        Schema::TYPE_CHAR => 'nchar(1)',
-        Schema::TYPE_STRING => 'nvarchar(255)',
-        Schema::TYPE_TEXT => 'nvarchar(max)',
-        Schema::TYPE_TINYINT => 'tinyint',
-        Schema::TYPE_SMALLINT => 'smallint',
-        Schema::TYPE_INTEGER => 'int',
-        Schema::TYPE_BIGINT => 'bigint',
-        Schema::TYPE_FLOAT => 'float',
-        Schema::TYPE_DOUBLE => 'float',
-        Schema::TYPE_DECIMAL => 'decimal(18,0)',
-        Schema::TYPE_DATETIME => 'datetime',
-        Schema::TYPE_TIMESTAMP => 'datetime',
-        Schema::TYPE_TIME => 'time',
-        Schema::TYPE_DATE => 'date',
-        Schema::TYPE_BINARY => 'varbinary(max)',
-        Schema::TYPE_BOOLEAN => 'bit',
-        Schema::TYPE_MONEY => 'decimal(19,4)',
+        SchemaPDOMssql::TYPE_PK => 'int IDENTITY PRIMARY KEY',
+        SchemaPDOMssql::TYPE_UPK => 'int IDENTITY PRIMARY KEY',
+        SchemaPDOMssql::TYPE_BIGPK => 'bigint IDENTITY PRIMARY KEY',
+        SchemaPDOMssql::TYPE_UBIGPK => 'bigint IDENTITY PRIMARY KEY',
+        SchemaPDOMssql::TYPE_CHAR => 'nchar(1)',
+        SchemaPDOMssql::TYPE_STRING => 'nvarchar(255)',
+        SchemaPDOMssql::TYPE_TEXT => 'nvarchar(max)',
+        SchemaPDOMssql::TYPE_TINYINT => 'tinyint',
+        SchemaPDOMssql::TYPE_SMALLINT => 'smallint',
+        SchemaPDOMssql::TYPE_INTEGER => 'int',
+        SchemaPDOMssql::TYPE_BIGINT => 'bigint',
+        SchemaPDOMssql::TYPE_FLOAT => 'float',
+        SchemaPDOMssql::TYPE_DOUBLE => 'float',
+        SchemaPDOMssql::TYPE_DECIMAL => 'decimal(18,0)',
+        SchemaPDOMssql::TYPE_DATETIME => 'datetime',
+        SchemaPDOMssql::TYPE_TIMESTAMP => 'datetime',
+        SchemaPDOMssql::TYPE_TIME => 'time',
+        SchemaPDOMssql::TYPE_DATE => 'date',
+        SchemaPDOMssql::TYPE_BINARY => 'varbinary(max)',
+        SchemaPDOMssql::TYPE_BOOLEAN => 'bit',
+        SchemaPDOMssql::TYPE_MONEY => 'decimal(19,4)',
     ];
 
     public function __construct(private ConnectionInterface $db)
@@ -719,7 +719,7 @@ final class QueryBuilder extends AbstractQueryBuilder
      * Converts an abstract column type into a physical column type.
      *
      * The conversion is done using the type map specified in {@see typeMap}.
-     * The following abstract column types are supported (using MySQL as an example to explain the corresponding
+     * The following abstract column types are supported (using Mssql as an example to explain the corresponding
      * physical types):
      *
      * - `pk`: an auto-incremental primary key type, will be converted into "int(11) NOT NULL AUTO_INCREMENT PRIMARY
@@ -752,7 +752,7 @@ final class QueryBuilder extends AbstractQueryBuilder
      * For some of the abstract types you can also specify a length or precision constraint by appending it in round
      * brackets directly to the type.
      *
-     * For example `string(32)` will be converted into "varchar(32)" on a MySQL database. If the underlying DBMS does
+     * For example `string(32)` will be converted into "varchar(32)" on a Mssql database. If the underlying DBMS does
      * not support these kind of constraints for a type it will be ignored.
      *
      * If a type cannot be found in {@see typeMap}, it will be returned without any change.

@@ -8,8 +8,9 @@ use Closure;
 use Yiisoft\Arrays\ArrayHelper;
 use Yiisoft\Db\Connection\ConnectionInterface;
 use Yiisoft\Db\Expression\Expression;
-use Yiisoft\Db\Mssql\QueryBuilder;
+use Yiisoft\Db\Mssql\PDO\QueryBuilderPDOMssql;
 use Yiisoft\Db\Query\Query;
+use Yiisoft\Db\Query\QueryBuilderInterface;
 use Yiisoft\Db\TestSupport\TestQueryBuilderTrait;
 use Yiisoft\Db\TestSupport\TraversableObject;
 
@@ -39,11 +40,11 @@ final class QueryBuilderTest extends TestCase
     ];
 
     /**
-     * @return QueryBuilder
+     * @return QueryBuilderInterface
      */
-    protected function getQueryBuilder(ConnectionInterface $db): QueryBuilder
+    protected function getQueryBuilder(ConnectionInterface $db): QueryBuilderInterface
     {
-        return new QueryBuilder($db);
+        return new QueryBuilderPDOMssql($db);
     }
 
     protected function getCommmentsFromTable(string $table): array
@@ -260,18 +261,6 @@ final class QueryBuilderTest extends TestCase
 
         $result = $this->getCommentsFromColumn($table, $column);
         $this->assertEquals([], $result);
-    }
-
-    /**
-     * @dataProvider addDropChecksProviderTrait
-     *
-     * @param string $sql
-     * @param Closure $builder
-     */
-    public function testAddDropCheck(string $sql, Closure $builder): void
-    {
-        $db = $this->getConnection();
-        $this->assertSame($db->getQuoter()->quoteSql($sql), $builder($this->getQueryBuilder($db)));
     }
 
     /**
