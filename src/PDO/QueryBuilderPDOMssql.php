@@ -17,7 +17,7 @@ use Yiisoft\Db\Mssql\Condition\LikeConditionBuilder;
 use Yiisoft\Db\Query\Conditions\InCondition;
 use Yiisoft\Db\Query\Conditions\LikeCondition;
 use Yiisoft\Db\Query\Query;
-use Yiisoft\Db\Query\QueryBuilder as AbstractQueryBuilder;
+use Yiisoft\Db\Query\QueryBuilder;
 use Yiisoft\Db\Schema\ColumnSchemaBuilder;
 
 use function array_diff;
@@ -34,7 +34,7 @@ use function version_compare;
 /**
  * QueryBuilder is the query builder for MS SQL Server databases (version 2008 and above).
  */
-final class QueryBuilderPDOMssql extends AbstractQueryBuilder
+final class QueryBuilderPDOMssql extends QueryBuilder
 {
     /**
      * @var array mapping from abstract column types (keys) to physical column types (values).

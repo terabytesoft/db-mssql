@@ -21,6 +21,7 @@ use Yiisoft\Db\Mssql\Quoter;
 use Yiisoft\Db\Query\QueryBuilderInterface;
 use Yiisoft\Db\Schema\QuoterInterface;
 use Yiisoft\Db\Schema\SchemaInterface;
+use Yiisoft\Db\Transaction\TransactionInterface;
 
 use function constant;
 
@@ -101,6 +102,11 @@ final class ConnectionPDOMssql extends Connection implements ConnectionPDOInterf
         }
 
         return $command->bindValues($params);
+    }
+
+    public function createTransaction(): TransactionInterface
+    {
+        return new TransactionPDOMssql($this);
     }
 
     public function close(): void

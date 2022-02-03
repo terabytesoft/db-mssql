@@ -6,9 +6,10 @@ namespace Yiisoft\Db\Mssql\Tests;
 
 use PDO;
 use Yiisoft\Cache\CacheKeyNormalizer;
+use Yiisoft\Db\Connection\ConnectionInterface;
 use Yiisoft\Db\Exception\Exception;
 use Yiisoft\Db\Exception\InvalidConfigException;
-use Yiisoft\Db\Mssql\Connection;
+use Yiisoft\Db\Mssql\PDO\TransactionPDOMssql;
 use Yiisoft\Db\TestSupport\TestConnectionTrait;
 
 /**
@@ -218,5 +219,42 @@ final class ConnectionTest extends TestCase
         $this->assertFalse($this->cache->psr()->has($cacheKey), 'Caching is disabled');
 
         $db->close();
+    }
+
+    public function testTransactionIsolation(): void
+    {
+        $db = $this->getConnection(true);
+        $transaction = $db->beginTransaction(TransactionPDOMssql::READ_UNCOMMITTED);
+        $transaction->commit();
+
+        $transaction = $db->beginTransaction(TransactionPDOMssql::READ_COMMITTED);
+        $transaction->commit();
+
+        $transaction = $db->beginTransaction(TransactionPDOMssql::REPEATABLE_READ);
+        $transaction->commit();
+
+        $transaction = $db->beginTransaction(TransactionPDOMssql::SERIALIZABLE);
+        $transaction->commit();
+
+        /* should not be any exception so far */
+        $this->assertTrue(true);
+    }
+
+    public function testTransactionShortcutCustom(): void
+    {
+        $db = $this->getConnection(true);
+
+        $result = $db->transaction(static function (ConnectionInterface $db) {
+            $db->createCommand()->insert('profile', ['description' => 'test transaction shortcut'])->execute();
+            return true;
+        }, TransactionPDOMssql::READ_UNCOMMITTED);
+
+        $this->assertTrue($result, 'transaction shortcut valid value should be returned from callback');
+
+        $profilesCount = $db->createCommand(
+            "SELECT COUNT(*) FROM profile WHERE description = 'test transaction shortcut';"
+        )->queryScalar();
+
+        $this->assertEquals(1, $profilesCount, 'profile should be inserted in transaction shortcut');
     }
 }

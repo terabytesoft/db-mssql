@@ -4,16 +4,17 @@ declare(strict_types=1);
 
 namespace Yiisoft\Db\Mssql\PDO;
 
-use Exception;
+use PDOException;
 use Yiisoft\Db\Cache\QueryCache;
-use Yiisoft\Db\Command\Command as AbstractCommand;
+use Yiisoft\Db\Command\Command;
 use Yiisoft\Db\Connection\ConnectionPDOInterface;
+use Yiisoft\Db\Exception\Exception;
 use Yiisoft\Db\Exception\NotSupportedException;
 use Yiisoft\Db\Query\QueryBuilderInterface;
 use Yiisoft\Db\Schema\QuoterInterface;
 use Yiisoft\Db\Schema\SchemaInterface;
 
-final class CommandPDOMssql extends AbstractCommand
+final class CommandPDOMssql extends Command
 {
     public function __construct(
         private ConnectionPDOInterface $db,
@@ -49,9 +50,9 @@ final class CommandPDOMssql extends AbstractCommand
         try {
             $this->pdoStatement = $pdo->prepare($sql);
             $this->bindPendingParams();
-        } catch (Exception $e) {
+        } catch (PDOException $e) {
             $message = $e->getMessage() . "\nFailed to prepare SQL: $sql";
-            $errorInfo = $e instanceof PDOException ? $e->errorInfo : null;
+            $errorInfo = $e->errorInfo ?? null;
 
             throw new Exception($message, $errorInfo, $e);
         }

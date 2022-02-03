@@ -10,7 +10,6 @@ use Yiisoft\Db\Cache\SchemaCache;
 use Yiisoft\Db\Connection\ConnectionPDOInterface;
 use Yiisoft\Db\Constraint\CheckConstraint;
 use Yiisoft\Db\Constraint\Constraint;
-use Yiisoft\Db\Constraint\ConstraintFinderInterface;
 use Yiisoft\Db\Constraint\ConstraintFinderTrait;
 use Yiisoft\Db\Constraint\DefaultValueConstraint;
 use Yiisoft\Db\Constraint\ForeignKeyConstraint;
@@ -22,7 +21,7 @@ use Yiisoft\Db\Mssql\ColumnSchema;
 use Yiisoft\Db\Mssql\PDO;
 use Yiisoft\Db\Mssql\TableSchema;
 use Yiisoft\Db\Schema\ColumnSchemaBuilder;
-use Yiisoft\Db\Schema\Schema as AbstractSchema;
+use Yiisoft\Db\Schema\Schema;
 use Yiisoft\Db\View\ViewFinderTrait;
 
 use function array_map;
@@ -54,9 +53,8 @@ use function version_compare;
  *   }
  * >
  */
-final class SchemaPDOMssql extends AbstractSchema implements ConstraintFinderInterface
+final class SchemaPDOMssql extends Schema
 {
-    use ConstraintFinderTrait;
     use ViewFinderTrait;
 
     /**
