@@ -9,7 +9,6 @@ use Yiisoft\Db\Cache\QueryCache;
 use Yiisoft\Db\Command\Command;
 use Yiisoft\Db\Connection\ConnectionPDOInterface;
 use Yiisoft\Db\Exception\Exception;
-use Yiisoft\Db\Exception\NotSupportedException;
 use Yiisoft\Db\Query\QueryBuilderInterface;
 use Yiisoft\Db\Schema\QuoterInterface;
 use Yiisoft\Db\Schema\SchemaInterface;
@@ -18,9 +17,9 @@ final class CommandPDOMssql extends Command
 {
     public function __construct(
         private ConnectionPDOInterface $db,
-        private QueryBuilderInterface $queryBuilder,
-        private QueryCache $queryCache,
-        private QuoterInterface $quoter,
+        QueryBuilderInterface $queryBuilder,
+        QueryCache $queryCache,
+        QuoterInterface $quoter,
         private SchemaInterface $schema
     ) {
         parent::__construct($queryBuilder, $queryCache, $quoter, $schema);

@@ -10,7 +10,6 @@ use Yiisoft\Db\Cache\SchemaCache;
 use Yiisoft\Db\Connection\ConnectionPDOInterface;
 use Yiisoft\Db\Constraint\CheckConstraint;
 use Yiisoft\Db\Constraint\Constraint;
-use Yiisoft\Db\Constraint\ConstraintFinderTrait;
 use Yiisoft\Db\Constraint\DefaultValueConstraint;
 use Yiisoft\Db\Constraint\ForeignKeyConstraint;
 use Yiisoft\Db\Constraint\IndexConstraint;
@@ -244,11 +243,9 @@ SQL;
 
         $tables = $this->db->createCommand($sql, [':schema' => $schema])->queryColumn();
 
-        $tables = array_map(static function ($item) {
+        return array_map(static function ($item) {
             return '[' . $item . ']';
         }, $tables);
-
-        return $tables;
     }
 
     /**
@@ -551,7 +548,7 @@ SQL;
         $whereSql = '[t1].[table_name] = ' . $this->db->getQuoter()->quoteValue($table->getName());
 
         if ($table->getCatalogName() !== null) {
-            $columnsTableName = "{$table->getCatalogName()}.{$columnsTableName}";
+            $columnsTableName = "{$table->getCatalogName()}.$columnsTableName";
             $whereSql .= " AND [t1].[table_catalog] = '{$table->getCatalogName()}'";
         }
 
@@ -586,8 +583,8 @@ SQL;
         [t2].[major_id] = OBJECT_ID([t1].[TABLE_SCHEMA] + '.' + [t1].[table_name]) AND
         [t2].[minor_id] = COLUMNPROPERTY(OBJECT_ID([t1].[TABLE_SCHEMA] + '.' + [t1].[TABLE_NAME]), [t1].[COLUMN_NAME], 'ColumnID')
         ) as comment
-        FROM {$columnsTableName} AS [t1]
-        WHERE {$whereSql}
+        FROM $columnsTableName AS [t1]
+        WHERE $whereSql
         SQL;
 
         try {
@@ -646,8 +643,8 @@ SQL;
         SELECT
             [kcu].[constraint_name] AS [index_name],
             [kcu].[column_name] AS [field_name]
-        FROM {$keyColumnUsageTableName} AS [kcu]
-        LEFT JOIN {$tableConstraintsTableName} AS [tc] ON
+        FROM $keyColumnUsageTableName AS [kcu]
+        LEFT JOIN $tableConstraintsTableName AS [tc] ON
             [kcu].[table_schema] = [tc].[table_schema] AND
             [kcu].[table_name] = [tc].[table_name] AND
             [kcu].[constraint_name] = [tc].[constraint_name]
@@ -762,11 +759,9 @@ ORDER BY [t].[table_name]
 SQL;
 
         $views = $this->db->createCommand($sql, [':schema' => $schema])->queryColumn();
-        $views = array_map(static function ($item) {
+        return array_map(static function ($item) {
             return '[' . $item . ']';
         }, $views);
-
-        return $views;
     }
 
     /**
@@ -813,7 +808,7 @@ SQL;
      *
      * @return mixed constraints.
      */
-    private function loadTableConstraints(string $tableName, string $returnType)
+    private function loadTableConstraints(string $tableName, string $returnType): mixed
     {
         $sql = <<<SQL
 SELECT
@@ -928,16 +923,15 @@ SQL;
      *
      * @return array|false primary key values or false if the command fails.
      */
-    public function insert(string $table, array $columns)
+    public function insert(string $table, array $columns): bool|array
     {
         $command = $this->db->createCommand()->insert($table, $columns);
         if (!$command->execute()) {
             return false;
         }
 
-        $isVersion2005orLater = version_compare($this->db->getSchema()->getServerVersion(), '9', '>=');
+        $isVersion2005orLater = version_compare($this->db->getServerVersion(), '9', '>=');
         $inserted = $isVersion2005orLater ? $command->getPdoStatement()->fetch() : [];
-
         $tableSchema = $this->getTableSchema($table);
 
         $result = [];
@@ -970,7 +964,7 @@ SQL;
      *
      * @return ColumnSchemaBuilder column schema builder instance
      */
-    public function createColumnSchemaBuilder(string $type, $length = null): ColumnSchemaBuilder
+    public function createColumnSchemaBuilder(string $type, array|int|string $length = null): ColumnSchemaBuilder
     {
         return new ColumnSchemaBuilder($type, $length);
     }
@@ -992,7 +986,7 @@ SQL;
      */
     public function getRawTableName(string $name): string
     {
-        if (strpos($name, '{{') !== false) {
+        if (str_contains($name, '{{')) {
             $name = preg_replace('/{{(.*?)}}/', '\1', $name);
 
             return str_replace('%', $this->db->getTablePrefix(), $name);
@@ -1043,23 +1037,7 @@ SQL;
     }
 
     /**
-     * Returns a server version as a string comparable by {@see version_compare()}.
-     *
-     * @throws Exception
-     *
-     * @return string server version as a string.
-     */
-    public function getServerVersion(): string
-    {
-        if ($this->serverVersion === null) {
-            $this->serverVersion = $this->db->getSlavePdo()->getAttribute(PDO::ATTR_SERVER_VERSION);
-        }
-
-        return $this->serverVersion;
-    }
-
-    /**
-     * Changes row's array key case to lower if PDO's one is set to uppercase.
+     * Changes row's array key case to lower if PDO one is set to uppercase.
      *
      * @param array $row row's array or an array of row's arrays.
      * @param bool $multiple whether multiple rows or a single row passed.
@@ -1070,7 +1048,7 @@ SQL;
      */
     protected function normalizePdoRowKeyCase(array $row, bool $multiple): array
     {
-        if ($this->db->getSlavePdo()->getAttribute(PDO::ATTR_CASE) !== PDO::CASE_UPPER) {
+        if ($this->db->getSlavePdo()?->getAttribute(PDO::ATTR_CASE) !== PDO::CASE_UPPER) {
             return $row;
         }
 

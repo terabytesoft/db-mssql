@@ -9,12 +9,10 @@ use PDOException;
 use Psr\Log\LogLevel;
 use Yiisoft\Db\Cache\QueryCache;
 use Yiisoft\Db\Cache\SchemaCache;
-use Yiisoft\Db\Command\Command;
 use Yiisoft\Db\Command\CommandInterface;
 use Yiisoft\Db\Connection\Connection;
 use Yiisoft\Db\Connection\ConnectionPDOInterface;
 use Yiisoft\Db\Driver\PDODriver;
-use Yiisoft\Db\Driver\PDOInterface;
 use Yiisoft\Db\Exception\Exception;
 use Yiisoft\Db\Exception\InvalidConfigException;
 use Yiisoft\Db\Mssql\Quoter;
@@ -23,18 +21,16 @@ use Yiisoft\Db\Schema\QuoterInterface;
 use Yiisoft\Db\Schema\SchemaInterface;
 use Yiisoft\Db\Transaction\TransactionInterface;
 
-use function constant;
-
 /**
  * The class Connection represents a connection to a database via [PDO](https://secure.php.net/manual/en/book.pdo.php).
  */
 final class ConnectionPDOMssql extends Connection implements ConnectionPDOInterface
 {
-    private ?CommandInterface $command = null;
     private ?PDO $pdo = null;
     private ?QueryBuilderInterface $queryBuilder = null;
     private ?QuoterInterface $quoter = null;
     private ?SchemaInterface $schema = null;
+    private string $serverVersion = '';
 
     public function __construct(
         private PDODriver $driver,
@@ -176,6 +172,20 @@ final class ConnectionPDOMssql extends Connection implements ConnectionPDOInterf
         }
 
         return $this->quoter;
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function getServerVersion(): string
+    {
+        if ($this->serverVersion === '') {
+            /** @var mixed */
+            $version = $this->getSlavePDO()?->getAttribute(PDO::ATTR_SERVER_VERSION);
+            $this->serverVersion = is_string($version) ? $version : 'Version could not be determined.';
+        }
+
+        return $this->serverVersion;
     }
 
     public function getSchema(): SchemaInterface

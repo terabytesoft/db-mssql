@@ -20,6 +20,7 @@ use Yiisoft\Db\Query\Query;
 use Yiisoft\Db\Query\QueryBuilder;
 use Yiisoft\Db\Schema\ColumnSchemaBuilder;
 
+use Yiisoft\Db\Schema\Schema;
 use function array_diff;
 use function array_keys;
 use function implode;
@@ -40,27 +41,27 @@ final class QueryBuilderPDOMssql extends QueryBuilder
      * @var array mapping from abstract column types (keys) to physical column types (values).
      */
     protected array $typeMap = [
-        SchemaPDOMssql::TYPE_PK => 'int IDENTITY PRIMARY KEY',
-        SchemaPDOMssql::TYPE_UPK => 'int IDENTITY PRIMARY KEY',
-        SchemaPDOMssql::TYPE_BIGPK => 'bigint IDENTITY PRIMARY KEY',
-        SchemaPDOMssql::TYPE_UBIGPK => 'bigint IDENTITY PRIMARY KEY',
-        SchemaPDOMssql::TYPE_CHAR => 'nchar(1)',
-        SchemaPDOMssql::TYPE_STRING => 'nvarchar(255)',
-        SchemaPDOMssql::TYPE_TEXT => 'nvarchar(max)',
-        SchemaPDOMssql::TYPE_TINYINT => 'tinyint',
-        SchemaPDOMssql::TYPE_SMALLINT => 'smallint',
-        SchemaPDOMssql::TYPE_INTEGER => 'int',
-        SchemaPDOMssql::TYPE_BIGINT => 'bigint',
-        SchemaPDOMssql::TYPE_FLOAT => 'float',
-        SchemaPDOMssql::TYPE_DOUBLE => 'float',
-        SchemaPDOMssql::TYPE_DECIMAL => 'decimal(18,0)',
-        SchemaPDOMssql::TYPE_DATETIME => 'datetime',
-        SchemaPDOMssql::TYPE_TIMESTAMP => 'datetime',
-        SchemaPDOMssql::TYPE_TIME => 'time',
-        SchemaPDOMssql::TYPE_DATE => 'date',
-        SchemaPDOMssql::TYPE_BINARY => 'varbinary(max)',
-        SchemaPDOMssql::TYPE_BOOLEAN => 'bit',
-        SchemaPDOMssql::TYPE_MONEY => 'decimal(19,4)',
+        Schema::TYPE_PK => 'int IDENTITY PRIMARY KEY',
+        Schema::TYPE_UPK => 'int IDENTITY PRIMARY KEY',
+        Schema::TYPE_BIGPK => 'bigint IDENTITY PRIMARY KEY',
+        Schema::TYPE_UBIGPK => 'bigint IDENTITY PRIMARY KEY',
+        Schema::TYPE_CHAR => 'nchar(1)',
+        Schema::TYPE_STRING => 'nvarchar(255)',
+        Schema::TYPE_TEXT => 'nvarchar(max)',
+        Schema::TYPE_TINYINT => 'tinyint',
+        Schema::TYPE_SMALLINT => 'smallint',
+        Schema::TYPE_INTEGER => 'int',
+        Schema::TYPE_BIGINT => 'bigint',
+        Schema::TYPE_FLOAT => 'float',
+        Schema::TYPE_DOUBLE => 'float',
+        Schema::TYPE_DECIMAL => 'decimal(18,0)',
+        Schema::TYPE_DATETIME => 'datetime',
+        Schema::TYPE_TIMESTAMP => 'datetime',
+        Schema::TYPE_TIME => 'time',
+        Schema::TYPE_DATE => 'date',
+        Schema::TYPE_BINARY => 'varbinary(max)',
+        Schema::TYPE_BOOLEAN => 'bit',
+        Schema::TYPE_MONEY => 'decimal(19,4)',
     ];
 
     public function __construct(private ConnectionInterface $db)
@@ -113,8 +114,8 @@ final class QueryBuilderPDOMssql extends QueryBuilder
      * @param string $sql the existing SQL (without ORDER BY/LIMIT/OFFSET).
      * @param array $orderBy the order by columns. See {@see Query::orderBy} for more details on how to specify this
      * parameter.
-     * @param int|Query|null $limit the limit number. See {@see Query::limit} for more details.
-     * @param int|Query|null $offset the offset number. See {@see Query::offset} for more details.
+     * @param Expression|Query|int|null $limit the limit number. See {@see Query::limit} for more details.
+     * @param Expression|Query|int|null $offset the offset number. See {@see Query::offset} for more details.
      * @param array $params the binding parameters to be populated.
      *
      * @throws Exception|InvalidArgumentException
@@ -124,8 +125,8 @@ final class QueryBuilderPDOMssql extends QueryBuilder
     protected function newBuildOrderByAndLimit(
         string $sql,
         array $orderBy,
-        $limit,
-        $offset,
+        Expression|Query|int|null $limit,
+        Expression|Query|int|null $offset,
         array &$params = []
     ): string {
         $orderBy = $this->buildOrderBy($orderBy, $params);
@@ -160,15 +161,15 @@ final class QueryBuilderPDOMssql extends QueryBuilder
      * @param int|Query|null $offset the offset number. See {@see Query::offset} for more details.
      * @param array $params the binding parameters to be populated.
      *
-     * @throws Exception|InvalidArgumentException
-     *
      * @return string the SQL completed with ORDER BY/LIMIT/OFFSET (if any).
+     *@throws Exception|InvalidArgumentException
+     *
      */
     protected function oldBuildOrderByAndLimit(
         string $sql,
         array $orderBy,
-        $limit,
-        $offset,
+        Query|int|null $limit,
+        Query|int|null $offset,
         array &$params = []
     ): string {
         $orderBy = $this->buildOrderBy($orderBy, $params);
@@ -226,7 +227,7 @@ final class QueryBuilderPDOMssql extends QueryBuilder
         $oldName = $this->db->getQuoter()->quoteColumnName($oldName);
         $newName = $this->db->getQuoter()->quoteColumnName($newName);
 
-        return "sp_rename '{$table}.{$oldName}', {$newName}, 'COLUMN'";
+        return "sp_rename '$table.$oldName', $newName, 'COLUMN'";
     }
 
     /**
@@ -263,7 +264,7 @@ final class QueryBuilderPDOMssql extends QueryBuilder
      * quoted by the method.
      * @param mixed $value default value.
      *
-     * @throws Exception
+     * @throws \Exception
      *
      * @return string the SQL statement for adding a default value constraint to an existing table.
      */
@@ -316,12 +317,12 @@ final class QueryBuilderPDOMssql extends QueryBuilder
             if ($value === null) {
                 $pk = $table->getPrimaryKey();
                 $key = $this->db->getQuoter()->quoteColumnName(reset($pk));
-                $value = "(SELECT COALESCE(MAX({$key}),0) FROM {$tableName})+1";
+                $value = "(SELECT COALESCE(MAX($key),0) FROM $tableName)+1";
             } else {
                 $value = (int)$value;
             }
 
-            return "DBCC CHECKIDENT ('{$tableName}', RESEED, {$value})";
+            return "DBCC CHECKIDENT ('$tableName', RESEED, $value)";
         }
 
         throw new InvalidArgumentException("There is not sequence associated with table '$tableName'.");
@@ -351,7 +352,7 @@ final class QueryBuilderPDOMssql extends QueryBuilder
         $command = '';
 
         foreach ($tableNames as $tableName) {
-            $tableName = $db->getQuoter()->quoteTableName("{$schema}.{$tableName}");
+            $tableName = $db->getQuoter()->quoteTableName("$schema.$tableName");
             $command .= "ALTER TABLE $tableName $enable CONSTRAINT ALL; ";
         }
 
@@ -368,7 +369,7 @@ final class QueryBuilderPDOMssql extends QueryBuilder
      * @param string|null $column optional. The name of the column to be commented. If empty, the command will add the
      * comment to the table instead. The column name will be properly quoted by the method.
      *
-     * @throws Exception|InvalidArgumentException if the table does not exist.
+     * @throws \Exception|InvalidArgumentException if the table does not exist.
      *
      * @return string the SQL statement for adding a comment.
      */
@@ -451,7 +452,7 @@ final class QueryBuilderPDOMssql extends QueryBuilder
      * @param string|null $column optional. The name of the column whose comment will be removed. If empty, the command
      * will remove the comment from the table instead. The column name will be properly quoted by the method.
      *
-     * @throws Exception|InvalidArgumentException if the table does not exist.
+     * @throws \Exception|InvalidArgumentException if the table does not exist.
      *
      * @return string the SQL statement for removing the comment.
      */
@@ -566,11 +567,11 @@ final class QueryBuilderPDOMssql extends QueryBuilder
      * @param array $params the binding parameters that will be generated by this method. They should be bound to the
      * DB command later.
      *
-     * @throws Exception|InvalidArgumentException|InvalidConfigException|JsonException|NotSupportedException
+     * @throws Exception|InvalidArgumentException|InvalidConfigException|NotSupportedException
      *
      * @return string the INSERT SQL.
      */
-    public function insert(string $table, $columns, array &$params = []): string
+    public function insert(string $table, Query|array $columns, array &$params = []): string
     {
         $version2005orLater = version_compare($this->db->getServerVersion(), '9', '>=');
 
@@ -624,7 +625,7 @@ final class QueryBuilderPDOMssql extends QueryBuilder
      * @param string $table the table that new rows will be inserted into/updated in.
      * @param array|Query $insertColumns the column data (name => value) to be inserted into the table or instance of
      * {@see Query} to perform `INSERT INTO ... SELECT` SQL statement.
-     * @param array|bool $updateColumns the column data (name => value) to be updated if they already exist.
+     * @param bool|array $updateColumns the column data (name => value) to be updated if they already exist.
      * If `true` is passed, the column data will be updated to match the insert column data.
      * If `false` is passed, no update will be performed if the column data already exists.
      * @param array $params the binding parameters that will be generated by this method.
@@ -635,10 +636,10 @@ final class QueryBuilderPDOMssql extends QueryBuilder
      *
      * @return string the resulting SQL.
      *
-     * {@see https://docs.microsoft.com/en-us/sql/t-sql/statements/merge-transact-sql}
-     * {@see http://weblogs.sqlteam.com/dang/archive/2009/01/31/UPSERT-Race-Condition-With-MERGE.aspx}
+     * @link https://docs.microsoft.com/en-us/sql/t-sql/statements/merge-transact-sql
+     * @link http://weblogs.sqlteam.com/dang/archive/2009/01/31/UPSERT-Race-Condition-With-MERGE.aspx
      */
-    public function upsert(string $table, $insertColumns, $updateColumns, array &$params): string
+    public function upsert(string $table, Query|array $insertColumns, bool|array $updateColumns, array &$params): string
     {
         /** @var Constraint[] $constraints */
         $constraints = [];
@@ -749,11 +750,11 @@ final class QueryBuilderPDOMssql extends QueryBuilder
      *
      * For example, 'string NOT NULL' is converted to 'varchar(255) NOT NULL'.
      *
-     * For some of the abstract types you can also specify a length or precision constraint by appending it in round
+     * For some abstract types you can also specify a length or precision constraint by appending it in round
      * brackets directly to the type.
      *
      * For example `string(32)` will be converted into "varchar(32)" on a Mssql database. If the underlying DBMS does
-     * not support these kind of constraints for a type it will be ignored.
+     * not support this kind of constraints for a type it will be ignored.
      *
      * If a type cannot be found in {@see typeMap}, it will be returned without any change.
      *
