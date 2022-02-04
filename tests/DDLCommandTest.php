@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Yiisoft\Db\Mssql\Tests;
 
 use Closure;
-use Yiisoft\Db\Command\DDLCommand;
 use Yiisoft\Db\Exception\NotSupportedException;
+use Yiisoft\Db\Mssql\DDLCommand;
 
 /**
  * @group mysql
