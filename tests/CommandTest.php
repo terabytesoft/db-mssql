@@ -185,18 +185,15 @@ final class CommandTest extends TestCase
         $db->createCommand()->createTable($tableName, [
             'int1' => 'integer',
         ])->execute();
-
         $this->assertEmpty($schema->getTableDefaultValues($tableName, true));
 
         $db->createCommand()->addDefaultValue($name, $tableName, 'int1', 41)->execute();
-
         $this-> assertMatchesRegularExpression(
             '/^.*41.*$/',
             $schema->getTableDefaultValues($tableName, true)[0]->getValue()
         );
 
         $db->createCommand()->dropDefaultValue($name, $tableName)->execute();
-
         $this->assertEmpty($schema->getTableDefaultValues($tableName, true));
     }
 
