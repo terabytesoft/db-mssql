@@ -507,10 +507,8 @@ final class SchemaTest extends TestCase
             'testPKTable',
             ['id' => SchemaPDOMssql::TYPE_PK, 'bar' => SchemaPDOMssql::TYPE_INTEGER]
         )->execute();
-
         $insertResult = $db->getSchema()->insert('testPKTable', ['bar' => 1]);
         $selectResult = $db->createCommand('select [id] from [testPKTable] where [bar]=1')->queryOne();
-
         $this->assertEquals($selectResult['id'], $insertResult['id']);
     }
 }

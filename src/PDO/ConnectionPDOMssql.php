@@ -265,6 +265,7 @@ final class ConnectionPDOMssql extends Connection implements ConnectionPDOInterf
     protected function initConnection(): void
     {
         $this->pdo = $this->driver->createConnection();
+
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
         if (in_array($this->getDriverName(), ['mssql', 'dblib'], true)) {

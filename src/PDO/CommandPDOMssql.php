@@ -19,7 +19,7 @@ final class CommandPDOMssql extends Command
 {
     public function __construct(
         private ConnectionPDOInterface $db,
-        QueryBuilderInterface $queryBuilder,
+        private QueryBuilderInterface $queryBuilder,
         QueryCache $queryCache,
         private QuoterInterface $quoter,
         private SchemaInterface $schema
@@ -34,7 +34,7 @@ final class CommandPDOMssql extends Command
 
     public function getDMLCommand(): DMLCommand
     {
-        return new DMLCommand($this->quoter, $this->schema);
+        return new DMLCommand($this->queryBuilder, $this->quoter, $this->schema);
     }
 
     public function prepare(?bool $forRead = null): void
