@@ -7,6 +7,7 @@ namespace Yiisoft\Db\Mssql;
 use Exception;
 use Yiisoft\Db\Exception\InvalidArgumentException;
 use Yiisoft\Db\Exception\NotSupportedException;
+use Yiisoft\Db\Mssql\PDO\SchemaPDOMssql;
 use Yiisoft\Db\Query\DDLQueryBuilder as AbstractDDLQueryBuilder;
 use Yiisoft\Db\Query\QueryBuilderInterface;
 
@@ -62,6 +63,8 @@ final class DDLQueryBuilder extends AbstractDDLQueryBuilder
     public function checkIntegrity(string $schema = '', string $table = '', bool $check = true): string
     {
         $enable = $check ? 'CHECK' : 'NOCHECK';
+
+        /** @var SchemaPDOMssql */
         $schemaInstance = $this->queryBuilder->schema();
         $defaultSchema = $schema ?: $schemaInstance->getDefaultSchema();
         $tableNames =  $schemaInstance->getTableSchema($table)

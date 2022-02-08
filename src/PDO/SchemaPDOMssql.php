@@ -21,7 +21,7 @@ use Yiisoft\Db\Mssql\PDO;
 use Yiisoft\Db\Mssql\TableSchema;
 use Yiisoft\Db\Schema\ColumnSchemaBuilder;
 use Yiisoft\Db\Schema\Schema;
-use Yiisoft\Db\View\ViewFinderTrait;
+use Yiisoft\Db\View\ViewInterface;
 
 use function array_map;
 use function count;
@@ -52,10 +52,8 @@ use function version_compare;
  *   }
  * >
  */
-final class SchemaPDOMssql extends Schema
+final class SchemaPDOMssql extends Schema implements ViewInterface
 {
-    use ViewFinderTrait;
-
     /**
      * @var string|null the default schema used for the current session.
      */
@@ -116,6 +114,7 @@ final class SchemaPDOMssql extends Schema
     ];
 
     private ?string $serverVersion = null;
+    private array $viewNames = [];
 
     public function __construct(private ConnectionPDOInterface $db, SchemaCache $schemaCache)
     {
@@ -736,29 +735,21 @@ SQL;
         }
     }
 
-    /**
-     * Returns all views names in the database.
-     *
-     * @param string $schema the schema of the views. Defaults to empty string, meaning the current or default schema.
-     *
-     * @throws Exception|InvalidConfigException|Throwable
-     *
-     * @return array all views names in the database. The names have NO schema name prefix.
-     */
-    protected function findViewNames(string $schema = ''): array
+    public function findViewNames(string $schema = ''): array
     {
         if ($schema === '') {
             $schema = $this->defaultSchema;
         }
 
         $sql = <<<SQL
-SELECT [t].[table_name]
-FROM [INFORMATION_SCHEMA].[TABLES] AS [t]
-WHERE [t].[table_schema] = :schema AND [t].[table_type] = 'VIEW'
-ORDER BY [t].[table_name]
-SQL;
+        SELECT [t].[table_name]
+        FROM [INFORMATION_SCHEMA].[TABLES] AS [t]
+        WHERE [t].[table_schema] = :schema AND [t].[table_type] = 'VIEW'
+        ORDER BY [t].[table_name]
+        SQL;
 
         $views = $this->db->createCommand($sql, [':schema' => $schema])->queryColumn();
+
         return array_map(static function ($item) {
             return '[' . $item . ']';
         }, $views);
@@ -1081,5 +1072,14 @@ SQL;
         }
 
         throw new InvalidCallException('DB Connection is not active.');
+    }
+
+    public function getViewNames(string $schema = '', bool $refresh = false): array
+    {
+        if (!isset($this->viewNames[$schema]) || $refresh) {
+            $this->viewNames[$schema] = $this->findViewNames($schema);
+        }
+
+        return $this->viewNames[$schema];
     }
 }
