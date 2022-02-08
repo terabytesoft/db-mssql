@@ -15,18 +15,14 @@ use Yiisoft\Db\Schema\SchemaInterface;
 
 final class CommandPDOMssql extends Command
 {
-    public function __construct(
-        private ConnectionPDOInterface $db,
-        QueryCache $queryCache,
-        private QuoterInterface $quoter,
-        private SchemaInterface $schema
-    ) {
+    public function __construct(private ConnectionPDOInterface $db, QueryCache $queryCache)
+    {
         parent::__construct($queryCache);
     }
 
     public function queryBuilder(): QueryBuilderInterface
     {
-        return new QueryBuilderPDOMssql($this, $this->quoter, $this->schema);
+        return $this->db->getQueryBuilder();
     }
 
     public function prepare(?bool $forRead = null): void
