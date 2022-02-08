@@ -26,31 +26,25 @@ final class CommandTest extends TestCase
     public function testAddDropCheck(): void
     {
         $db = $this->getConnection();
+        $schema = $db->getSchema();
 
         $tableName = 'test_ck';
         $name = 'test_ck_constraint';
-
-        $schema = $db->getSchema();
 
         if ($schema->getTableSchema($tableName) !== null) {
             $db->createCommand()->dropTable($tableName)->execute();
         }
 
-        $db->createCommand()->createTable($tableName, [
-            'int1' => 'integer',
-        ])->execute();
-
+        $db->createCommand()->createTable($tableName, ['int1' => 'integer'])->execute();
         $this->assertEmpty($schema->getTableChecks($tableName, true));
 
         $db->createCommand()->addCheck($name, $tableName, '[[int1]] > 1')->execute();
-
         $this->assertMatchesRegularExpression(
             '/^.*int1.*>.*1.*$/',
             $schema->getTableChecks($tableName, true)[0]->getExpression()
         );
 
         $db->createCommand()->dropCheck($name, $tableName)->execute();
-
         $this->assertEmpty($schema->getTableChecks($tableName, true));
     }
 
@@ -167,34 +161,6 @@ final class CommandTest extends TestCase
             ['id' => 1, 'bar' => 1],
             ['id' => 2, 'bar' => 'hello'],
         ], $records);
-    }
-
-    public function testAddDropDefaultValue(): void
-    {
-        $db = $this->getConnection();
-
-        $tableName = 'test_def';
-        $name = 'test_def_constraint';
-
-        $schema = $db->getSchema();
-
-        if ($schema->getTableSchema($tableName) !== null) {
-            $db->createCommand()->dropTable($tableName)->execute();
-        }
-
-        $db->createCommand()->createTable($tableName, [
-            'int1' => 'integer',
-        ])->execute();
-        $this->assertEmpty($schema->getTableDefaultValues($tableName, true));
-
-        $db->createCommand()->addDefaultValue($name, $tableName, 'int1', 41)->execute();
-        $this-> assertMatchesRegularExpression(
-            '/^.*41.*$/',
-            $schema->getTableDefaultValues($tableName, true)[0]->getValue()
-        );
-
-        $db->createCommand()->dropDefaultValue($name, $tableName)->execute();
-        $this->assertEmpty($schema->getTableDefaultValues($tableName, true));
     }
 
     public function batchInsertSqlProvider()

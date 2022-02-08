@@ -14,7 +14,7 @@ class TestCase extends AbstractTestCase
 {
     use TestTrait;
 
-    protected string $drivername = 'mssql';
+    protected string $drivername = 'sqlsrv';
     protected string $dsn = 'sqlsrv:Server=127.0.0.1,1433;Database=yiitest';
     protected string $username = 'SA';
     protected string $password = 'YourStrong!Passw0rd';
@@ -26,11 +26,13 @@ class TestCase extends AbstractTestCase
 
     /**
      * @param bool $reset whether to clean up the test database.
+     * @param string|null $dsn
+     * @param string $fixture
      *
      * @return ConnectionPDOMssql
      */
     protected function getConnection(
-        $reset = false,
+        bool $reset = false,
         ?string $dsn = null,
         string $fixture = __DIR__ . '/Fixture/mssql.sql'
     ): ConnectionPDOMssql {

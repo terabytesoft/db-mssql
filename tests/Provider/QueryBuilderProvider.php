@@ -2,23 +2,137 @@
 
 declare(strict_types=1);
 
-namespace Yiisoft\Db\Mssql\Tests;
+namespace Yiisoft\Db\Mssql\Tests\Provider;
 
-use InvalidArgumentException;
-use Yiisoft\Arrays\ArrayHelper;
-use Yiisoft\Db\Exception\Exception;
-use Yiisoft\Db\Exception\NotSupportedException;
 use Yiisoft\Db\Expression\Expression;
-use Yiisoft\Db\Mssql\ColumnSchema;
-use Yiisoft\Db\Mssql\DMLCommand;
+use Yiisoft\Db\Mssql\Tests\TestCase;
 use Yiisoft\Db\Query\Query;
+use Yiisoft\Db\Query\QueryBuilderInterface;
+use Yiisoft\Db\TestSupport\Provider\QueryBuilderProvider as BaseQueryBuilderProvider;
+use Yiisoft\Db\TestSupport\TraversableObject;
 
-/**
- * @group mysql
- */
-final class DMLCommandTest extends TestCase
+final class QueryBuilderProvider extends TestCase
 {
-    public function insertProvider()
+    /**
+     * @var string ` ESCAPE 'char'` part of a LIKE condition SQL.
+     */
+    protected string $likeEscapeCharSql = '';
+
+    /**
+     * @var array map of values to their replacements in LIKE query params.
+     */
+    protected array $likeParameterReplacements = [
+        '\%' => '[%]',
+        '\_' => '[_]',
+        '[' => '[[]',
+        ']' => '[]]',
+        '\\\\' => '[\\]',
+    ];
+
+    public function addDropChecksProvider(): array
+    {
+        $tableName = 'T_constraints_1';
+        $name = 'CN_check';
+
+        return [
+            'drop' => [
+                "ALTER TABLE {{{$tableName}}} DROP CONSTRAINT [[$name]]",
+                static function (QueryBuilderInterface $qb) use ($tableName, $name) {
+                    return $qb->dropCheck($name, $tableName);
+                },
+            ],
+            'add' => [
+                "ALTER TABLE {{{$tableName}}} ADD CONSTRAINT [[$name]] CHECK ([[C_not_null]] > 100)",
+                static function (QueryBuilderInterface $qb) use ($tableName, $name) {
+                    return $qb->addCheck($name, $tableName, '[[C_not_null]] > 100');
+                },
+            ],
+        ];
+    }
+
+    public function addDropForeignKeysProvider(): array
+    {
+        return (new BaseQueryBuilderProvider($this->getConnection()))->addDropForeignKeysProvider();
+    }
+
+    public function addDropPrimaryKeysProvider(): array
+    {
+        return (new BaseQueryBuilderProvider($this->getConnection()))->addDropPrimaryKeysProvider();
+    }
+
+    public function addDropUniquesProvider(): array
+    {
+        return (new BaseQueryBuilderProvider($this->getConnection()))->addDropUniquesProvider();
+    }
+
+    public function batchInsertProvider(): array
+    {
+        $data = (new BaseQueryBuilderProvider($this->getConnection()))->batchInsertProvider();
+        $data['escape-danger-chars']['expected'] = 'INSERT INTO [customer] ([address])'
+            . " VALUES ('SQL-danger chars are escaped: ''); --')";
+        $data['bool-false, bool2-null']['expected'] = 'INSERT INTO [type] ([bool_col], [bool_col2]) VALUES (0, NULL)';
+        $data['bool-false, time-now()']['expected'] = 'INSERT INTO {{%type}} ({{%type}}.[[bool_col]], [[time]])'
+            . ' VALUES (0, now())';
+
+        return $data;
+    }
+
+    public function buildConditionsProvider(): array
+    {
+        $data = (new BaseQueryBuilderProvider($this->getConnection()))->buildConditionsProvider();
+
+        $data['composite in'] = [
+            ['in', ['id', 'name'], [['id' => 1, 'name' => 'oy']]],
+            '(([id] = :qp0 AND [name] = :qp1))',
+            [':qp0' => 1, ':qp1' => 'oy'],
+        ];
+        $data['composite in using array objects'] = [
+            ['in', new TraversableObject(['id', 'name']), new TraversableObject([
+                ['id' => 1, 'name' => 'oy'],
+                ['id' => 2, 'name' => 'yo'],
+            ])],
+            '(([id] = :qp0 AND [name] = :qp1) OR ([id] = :qp2 AND [name] = :qp3))',
+            [':qp0' => 1, ':qp1' => 'oy', ':qp2' => 2, ':qp3' => 'yo'],
+        ];
+
+        return $data;
+    }
+
+    public function buildExistsParamsProvider(): array
+    {
+        return (new BaseQueryBuilderProvider($this->getConnection()))->buildExistsParamsProvider();
+    }
+
+    public function buildFilterConditionProvider(): array
+    {
+        return (new BaseQueryBuilderProvider($this->getConnection()))->buildFilterConditionProvider();
+    }
+
+    public function buildFromDataProvider(): array
+    {
+        return (new BaseQueryBuilderProvider($this->getConnection()))->buildFromDataProvider();
+    }
+
+    public function buildLikeConditionsProvider(): array
+    {
+        return (new BaseQueryBuilderProvider(
+            $this->getConnection(),
+            $this->likeEscapeCharSql,
+            $this->likeParameterReplacements
+        ))->buildLikeConditionsProvider();
+    }
+
+    public function createDropIndexesProvider(): array
+    {
+        return (new BaseQueryBuilderProvider($this->getConnection()))->createDropIndexesProvider();
+    }
+
+    public function deleteProvider(): array
+    {
+        return (new BaseQueryBuilderProvider($this->getConnection()))->deleteProvider();
+    }
+
+    public function insertProvider(): array
     {
         return [
             'regular-values' => [
@@ -115,23 +229,6 @@ final class DMLCommandTest extends TestCase
         ];
     }
 
-    /**
-     * @dataProvider insertProvider
-     *
-     * @param string $table
-     * @param array|ColumnSchema $columns
-     * @param array $params
-     * @param string $expectedSQL
-     * @param array $expectedParams
-     */
-    public function testInsert(string $table, $columns, array $params, string $expectedSQL, array $expectedParams): void
-    {
-        $db = $this->getConnection();
-        $dml = new DMLCommand($db->getQueryBuilder(), $db->getQuoter(), $db->getSchema());
-        $this->assertSame($expectedSQL, $dml->insert($table, $columns, $params));
-        $this->assertSame($expectedParams, $params);
-    }
-
     public function updateProvider(): array
     {
         return [
@@ -153,30 +250,6 @@ final class DMLCommandTest extends TestCase
                 ],
             ],
         ];
-    }
-
-    /**
-     * @dataProvider updateProvider
-     *
-     * @param string $table
-     * @param array $columns
-     * @param array|string $condition
-     * @param string $expectedSQL
-     * @param array $expectedParams
-     */
-    public function testUpdate(
-        string $table,
-        array $columns,
-        $condition,
-        string $expectedSQL,
-        array $expectedParams
-    ): void {
-        $actualParams = [];
-        $db = $this->getConnection();
-        $dml = new DMLCommand($db->getQueryBuilder(), $db->getQuoter(), $db->getSchema());
-        $actualSQL = $dml->update($table, $columns, $condition, $actualParams);
-        $this->assertSame($expectedSQL, $actualSQL);
-        $this->assertSame($expectedParams, $actualParams);
     }
 
     public function upsertProvider(): array
@@ -274,271 +347,12 @@ final class DMLCommandTest extends TestCase
             ],
         ];
 
-        $newData = $this->upsertProviderTrait();
+        $newData = (new BaseQueryBuilderProvider($this->getConnection()))->upsertProvider();
 
         foreach ($concreteData as $testName => $data) {
             $newData[$testName] = array_replace($newData[$testName], $data);
         }
 
         return $newData;
-    }
-
-    public function upsertProviderTrait(): array
-    {
-        return [
-            'regular values' => [
-                'T_upsert',
-                [
-                    'email' => 'test@example.com',
-                    'address' => 'bar {{city}}',
-                    'status' => 1,
-                    'profile_id' => null,
-                ],
-                true,
-                null,
-                [
-                    ':qp0' => 'test@example.com',
-                    ':qp1' => 'bar {{city}}',
-                    ':qp2' => 1,
-                    ':qp3' => null,
-                ],
-            ],
-            'regular values with update part' => [
-                'T_upsert',
-                [
-                    'email' => 'test@example.com',
-                    'address' => 'bar {{city}}',
-                    'status' => 1,
-                    'profile_id' => null,
-                ],
-                [
-                    'address' => 'foo {{city}}',
-                    'status' => 2,
-                    'orders' => new Expression('T_upsert.orders + 1'),
-                ],
-                null,
-                [
-                    ':qp0' => 'test@example.com',
-                    ':qp1' => 'bar {{city}}',
-                    ':qp2' => 1,
-                    ':qp3' => null,
-                    ':qp4' => 'foo {{city}}',
-                    ':qp5' => 2,
-                ],
-            ],
-            'regular values without update part' => [
-                'T_upsert',
-                [
-                    'email' => 'test@example.com',
-                    'address' => 'bar {{city}}',
-                    'status' => 1,
-                    'profile_id' => null,
-                ],
-                false,
-                null,
-                [
-                    ':qp0' => 'test@example.com',
-                    ':qp1' => 'bar {{city}}',
-                    ':qp2' => 1,
-                    ':qp3' => null,
-                ],
-            ],
-            'query' => [
-                'T_upsert',
-                (new Query($this->getConnection()))
-                    ->select([
-                        'email',
-                        'status' => new Expression('2'),
-                    ])
-                    ->from('customer')
-                    ->where(['name' => 'user1'])
-                    ->limit(1),
-                true,
-                null,
-                [
-                    ':qp0' => 'user1',
-                ],
-            ],
-            'query with update part' => [
-                'T_upsert',
-                (new Query($this->getConnection()))
-                    ->select([
-                        'email',
-                        'status' => new Expression('2'),
-                    ])
-                    ->from('customer')
-                    ->where(['name' => 'user1'])
-                    ->limit(1),
-                [
-                    'address' => 'foo {{city}}',
-                    'status' => 2,
-                    'orders' => new Expression('T_upsert.orders + 1'),
-                ],
-                null,
-                [
-                    ':qp0' => 'user1',
-                    ':qp1' => 'foo {{city}}',
-                    ':qp2' => 2,
-                ],
-            ],
-            'query without update part' => [
-                'T_upsert',
-                (new Query($this->getConnection()))
-                    ->select([
-                        'email',
-                        'status' => new Expression('2'),
-                    ])
-                    ->from('customer')
-                    ->where(['name' => 'user1'])
-                    ->limit(1),
-                false,
-                null,
-                [
-                    ':qp0' => 'user1',
-                ],
-            ],
-            'values and expressions' => [
-                '{{%T_upsert}}',
-                [
-                    '{{%T_upsert}}.[[email]]' => 'dynamic@example.com',
-                    '[[ts]]' => new Expression('now()'),
-                ],
-                true,
-                null,
-                [
-                    ':qp0' => 'dynamic@example.com',
-                ],
-            ],
-            'values and expressions with update part' => [
-                '{{%T_upsert}}',
-                [
-                    '{{%T_upsert}}.[[email]]' => 'dynamic@example.com',
-                    '[[ts]]' => new Expression('now()'),
-                ],
-                [
-                    '[[orders]]' => new Expression('T_upsert.orders + 1'),
-                ],
-                null,
-                [
-                    ':qp0' => 'dynamic@example.com',
-                ],
-            ],
-            'values and expressions without update part' => [
-                '{{%T_upsert}}',
-                [
-                    '{{%T_upsert}}.[[email]]' => 'dynamic@example.com',
-                    '[[ts]]' => new Expression('now()'),
-                ],
-                false,
-                null,
-                [
-                    ':qp0' => 'dynamic@example.com',
-                ],
-            ],
-            'query, values and expressions with update part' => [
-                '{{%T_upsert}}',
-                (new Query($this->getConnection()))
-                    ->select([
-                        'email' => new Expression(':phEmail', [':phEmail' => 'dynamic@example.com']),
-                        '[[time]]' => new Expression('now()'),
-                    ]),
-                [
-                    'ts' => 0,
-                    '[[orders]]' => new Expression('T_upsert.orders + 1'),
-                ],
-                null,
-                [
-                    ':phEmail' => 'dynamic@example.com',
-                    ':qp1' => 0,
-                ],
-            ],
-            'query, values and expressions without update part' => [
-                '{{%T_upsert}}',
-                (new Query($this->getConnection()))
-                    ->select([
-                        'email' => new Expression(':phEmail', [':phEmail' => 'dynamic@example.com']),
-                        '[[time]]' => new Expression('now()'),
-                    ]),
-                [
-                    'ts' => 0,
-                    '[[orders]]' => new Expression('T_upsert.orders + 1'),
-                ],
-                null,
-                [
-                    ':phEmail' => 'dynamic@example.com',
-                    ':qp1' => 0,
-                ],
-            ],
-            'no columns to update' => [
-                'T_upsert_1',
-                [
-                    'a' => 1,
-                ],
-                false,
-                null,
-                [
-                    ':qp0' => 1,
-                ],
-            ],
-        ];
-    }
-
-    /**
-     * @dataProvider upsertProvider
-     *
-     * @param string $table
-     * @param array|ColumnSchema|Query $insertColumns
-     * @param array|bool|null $updateColumns
-     * @param string|string[] $expectedSQL
-     * @param array|string $expectedParams
-     *
-     * @throws Exception|NotSupportedException
-     */
-    public function testUpsert(
-        string $table,
-        array|ColumnSchema|Query $insertColumns,
-        array|bool|null $updateColumns,
-        array|string $expectedSQL,
-        array $expectedParams
-    ): void {
-        $actualParams = [];
-        $db = $this->getConnection();
-        $dml = new DMLCommand($db->getQueryBuilder(), $db->getQuoter(), $db->getSchema());
-        $actualSQL = $dml->upsert($table, $insertColumns, $updateColumns, $actualParams);
-
-        if (is_string($expectedSQL)) {
-            $this->assertSame($expectedSQL, $actualSQL);
-        } else {
-            $this->assertContains($actualSQL, $expectedSQL);
-        }
-
-        if (ArrayHelper::isAssociative($expectedParams)) {
-            $this->assertSame($expectedParams, $actualParams);
-        } else {
-            $this->assertIsOneOf($actualParams, $expectedParams);
-        }
-    }
-
-    public function testUpsertVarbinary()
-    {
-        $db = $this->getConnection();
-        $dml = new DMLCommand($db->getQueryBuilder(), $db->getQuoter(), $db->getSchema());
-
-        $testData = json_encode(['test' => 'string', 'test2' => 'integer']);
-        $params = [];
-
-        $sql = $dml->upsert(
-            'T_upsert_varbinary',
-            ['id' => 1, 'blob_col' => $testData],
-            ['blob_col' => $testData],
-            $params
-        );
-
-        $result = $db->createCommand($sql, $params)->execute();
-        $this->assertEquals(1, $result);
-
-        $query = (new Query($db))->select(['blob_col as blob_col'])->from('T_upsert_varbinary')->where(['id' => 1]);
-        $resultData = $query->createCommand()->queryOne();
-        $this->assertEquals($testData, $resultData['blob_col']);
     }
 }

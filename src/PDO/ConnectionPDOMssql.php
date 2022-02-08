@@ -79,7 +79,6 @@ final class ConnectionPDOMssql extends Connection implements ConnectionPDOInterf
     {
         $command = new CommandPDOMssql(
             $this,
-            $this->getQueryBuilder(),
             $this->queryCache,
             $this->getQuoter(),
             $this->getSchema()
@@ -156,10 +155,17 @@ final class ConnectionPDOMssql extends Connection implements ConnectionPDOInterf
         return $this->pdo;
     }
 
+    /**
+     * @throws Exception|InvalidConfigException
+     */
     public function getQueryBuilder(): QueryBuilderInterface
     {
         if ($this->queryBuilder === null) {
-            $this->queryBuilder = new QueryBuilderPDOMssql($this);
+            $this->queryBuilder = new QueryBuilderPDOMssql(
+                $this->createCommand(),
+                $this->getQuoter(),
+                $this->getSchema(),
+            );
         }
 
         return $this->queryBuilder;
