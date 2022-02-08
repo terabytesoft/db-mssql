@@ -40,7 +40,7 @@ final class CommandPDOMssql extends Command
             $forRead = false;
         }
 
-        if ($forRead || ($forRead === null && $this->schema->isReadQuery($sql))) {
+        if ($forRead || ($forRead === null && $this->db->getSchema()->isReadQuery($sql))) {
             $pdo = $this->db->getSlavePdo();
         } else {
             $pdo = $this->db->getMasterPdo();
@@ -80,14 +80,14 @@ final class CommandPDOMssql extends Command
                     && $this->isolationLevel !== null
                     && $this->db->getTransaction() === null
                 ) {
-                    $this->db->transaction(fn ($rawSql) => $this->internalExecute($rawSql), $this->isolationLevel);
+                    $this->db->transaction(fn (string $rawSql) => $this->internalExecute($rawSql), $this->isolationLevel);
                 } else {
                     $this->pdoStatement->execute();
                 }
                 break;
-            } catch (\Exception $e) {
+            } catch (PDOException $e) {
                 $rawSql = $rawSql ?: $this->getRawSql();
-                $e = $this->schema->convertException($e, $rawSql);
+                $e = $this->db->getSchema()->convertException($e, $rawSql);
 
                 if ($this->retryHandler === null || !($this->retryHandler)($e, $attempt)) {
                     throw $e;
