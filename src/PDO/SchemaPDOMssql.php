@@ -1052,17 +1052,6 @@ SQL;
         return array_change_key_case($row, CASE_LOWER);
     }
 
-    /**
-     * Returns the ID of the last inserted row or sequence value.
-     *
-     * @param string $sequenceName name of the sequence object (required by some DBMS)
-     *
-     * @throws InvalidCallException if the DB connection is not active
-     *
-     * @return string the row ID of the last row inserted, or the last value retrieved from the sequence object
-     *
-     * @see http://www.php.net/manual/en/function.PDO-lastInsertId.php
-     */
     public function getLastInsertID(string $sequenceName = ''): string
     {
         if ($this->db->isActive()) {

@@ -12,6 +12,7 @@ use Yiisoft\Db\Exception\NotSupportedException;
 use Yiisoft\Db\Connection\ConnectionInterface;
 use Yiisoft\Db\Query\Conditions\InConditionBuilder as AbstractInConditionBuilder;
 use Yiisoft\Db\Query\Query;
+use Yiisoft\Db\Query\QueryBuilderInterface;
 
 use function implode;
 use function is_array;
@@ -19,6 +20,11 @@ use function strpos;
 
 final class InConditionBuilder extends AbstractInConditionBuilder
 {
+    public function __construct(private QueryBuilderInterface $queryBuilder)
+    {
+        parent::__construct($queryBuilder);
+    }
+
     /**
      * Builds SQL for IN condition.
      *
